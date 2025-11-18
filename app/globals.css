@@ -1,8 +1,12 @@
 @import "tailwindcss";
-
+@import 'swiper/css';
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary-color: #98171B;
+  --dark-color: #000000;
+  --light-color: #ffffff;
+  --bg-muted: #d4d4d4;
+  --text-muted: #6B7280;
+  --accent-color: #98171B;
 }
 
 @theme inline {
@@ -14,7 +18,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: lab(96.286% -.852466 -2.46847);
     --foreground: #ededed;
   }
 }
