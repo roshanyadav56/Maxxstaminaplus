@@ -9,6 +9,7 @@ export default function Checkout() {
   const [showForm, setShowForm] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [discount, setDiscount] = useState(0);
+  const [orderId, setOrderId] = useState("");
 
   // NEW: coupon input
   const [couponInput, setCouponInput] = useState("");
@@ -100,6 +101,15 @@ export default function Checkout() {
 
   const discountAmount = (subtotal * discount) / 100;
   const finalTotal = subtotal - discountAmount;
+
+  const formatDate = (date) =>
+    date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+  const generateOrderId = () => `MSP${Date.now()}`;
 
   // COUPON APPLY
   const applyCheckoutCoupon = () => {
@@ -276,16 +286,60 @@ export default function Checkout() {
     // remove checkoutProduct if any
     localStorage.removeItem("checkoutProduct");
 
+    const orderIdentifier = generateOrderId();
+    setOrderId(orderIdentifier);
+
     const today = new Date();
-    today.setDate(today.getDate() + 3);
+    const confirmedDate = formatDate(today);
+    const shippedDate = formatDate(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+    const outForDeliveryDate = formatDate(new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000));
+    const deliveredDate = formatDate(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
 
-    const formattedDate = today.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const orderSummary = {
+      price: Number(subtotal.toFixed(2)),
+      discountPercent: discount,
+      discount: Number(discountAmount.toFixed(2)),
+      delivery: 0,
+      tax: 0,
+      total: Number(finalTotal.toFixed(2)),
+    };
 
-    setDeliveryDate(formattedDate);
+    const orderPayload = {
+      orderId: orderIdentifier,
+      orderDate: confirmedDate,
+      estimatedDelivery: deliveredDate,
+      status: "confirmed",
+      timeline: {
+        confirmed: confirmedDate,
+        shipped: shippedDate,
+        outForDelivery: outForDeliveryDate,
+        delivered: deliveredDate,
+      },
+      items: cartItems.map((item) => ({
+        id: item.id,
+        title: item.name,
+        price: item.currentPrice,
+        qty: item.qty || 1,
+        img: item.image,
+      })),
+      summary: orderSummary,
+      payment: {
+        method: "Cash on Delivery",
+      },
+      delivery: {
+        address: chosenAddress?.address || "",
+      },
+    };
+
+    localStorage.setItem("lastOrderDetails", JSON.stringify(orderPayload));
+    const history = JSON.parse(localStorage.getItem("orderHistory") || "[]");
+    localStorage.setItem(
+      "orderHistory",
+      JSON.stringify([orderPayload, ...history])
+    );
+
+    const estimatedDateDisplay = deliveredDate;
+    setDeliveryDate(estimatedDateDisplay);
     setShowPopup(true);
 
     // OPTIONAL: Clear cart or keep as-is depending on flow
@@ -644,6 +698,11 @@ export default function Checkout() {
               Thank you for shopping with us. <br />
               Your order will reach you on <b>{deliveryDate}</b>.
             </p>
+            {orderId && (
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                Order ID: <span className="font-semibold text-[var(--primary-color)]">{orderId}</span>
+              </p>
+            )}
 
             {/* Show selected address summary */}
             <div className="mt-4 text-left bg-[var(--light-color)] p-4 rounded-lg border border-[var(--bg-muted)]">
@@ -671,11 +730,11 @@ export default function Checkout() {
             <button
               onClick={() => {
                 setShowPopup(false);
-                window.location.href = "/";
+                window.location.href = orderId ? `/order/${orderId}` : "/";
               }}
               className="mt-6 bg-[var(--primary-color)] text-white px-6 py-3 rounded-xl font-semibold"
             >
-              Continue Shopping
+              {orderId ? "Track Order" : "Continue Shopping"}
             </button>
           </div>
         </div>

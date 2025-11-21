@@ -7,12 +7,21 @@ import { FaHeart } from "react-icons/fa";
 
 export default function Wishlist() {
   const [items, setItems] = useState([]);
+  const [recentViews, setRecentViews] = useState([]);
 
   useEffect(() => {
     try {
       const w = localStorage.getItem("wishlist");
       if (w) setItems(JSON.parse(w));
-    } catch (e) { }
+
+      const viewedRaw = localStorage.getItem("justViewed");
+      if (viewedRaw) {
+        const parsed = JSON.parse(viewedRaw);
+        setRecentViews(Array.isArray(parsed) ? parsed : []);
+      }
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   const addToCart = (product) => {
@@ -137,65 +146,92 @@ export default function Wishlist() {
           </div>
         )}
       </section>
-      <section className="max-w-7xl mx-auto px-4 py-12 mt-16">
-  <div className="flex items-center gap-3 mb-6">
-    <div className="w-3 h-8 bg-[var(--primary-color)] rounded-md"></div>
-    <h2 className="text-2xl font-bold text-[var(--dark-color)]">Just Viewed Products</h2>
-  </div>
-
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-
-    {items.map((product) => (
-      <div
-        key={product.id}
-        className="bg-[var(--light-color)] rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative"
-      >
-
-        {/* DISCOUNT BADGE */}
-        <div className="absolute top-0 right-0 bg-[var(--primary-color)] text-[var(--light-color)] px-4 py-3 rounded-bl-2xl text-center leading-tight z-20">
-          <span className="text-sm font-semibold">{product.discountPercent}%</span>
-          <br />
-          <span className="text-[11px]">OFF</span>
-        </div>
-
-        {/* PRODUCT IMAGE */}
-        <div className="w-full bg-[var(--bg-muted)] flex items-center justify-center p-6 min-h-[210px]">
-          <Image
-            src={product.image}
-            alt={product.name}
-            width={180}
-            height={180}
-            className="object-contain"
-          />
-        </div>
-
-        {/* CONTENT */}
-        <div className="p-4">
-
-          {/* NAME */}
-          <h3 className="font-semibold text-[15px] mb-2 leading-tight text-[var(--dark-color)]">
-            {product.name}
-          </h3>
-
-          {/* PRICES */}
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-lg font-bold text-[var(--dark-color)]">₹{product.currentPrice}</span>
-            <span className="text-sm line-through text-[var(--text-muted)]">
-              ₹{product.oldPrice}
-            </span>
+      {recentViews.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-12 mt-16">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-3 h-8 bg-[var(--primary-color)] rounded-md"></div>
+            <h2 className="text-2xl font-bold text-[var(--dark-color)]">
+              Just Viewed Products
+            </h2>
           </div>
 
-          {/* SAVE */}
-          <div className="text-[var(--primary-color)] font-semibold mb-3">
-            Save – ₹{product.oldPrice - product.currentPrice}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {recentViews
+              .filter((product) => !items.some((wish) => wish.id === product.id))
+              .slice(0, 8)
+              .map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-[var(--light-color)] rounded-2xl border border-gray-200 shadow-sm overflow-hidden relative"
+                >
+                  <div className="absolute top-0 right-0 bg-[var(--primary-color)] text-[var(--light-color)] px-4 py-3 rounded-bl-2xl text-center leading-tight z-20">
+                    <span className="text-sm font-semibold">
+                      {product.discountPercent ?? product.discount ?? 0}%
+                    </span>
+                    <br />
+                    <span className="text-[11px]">OFF</span>
+                  </div>
+
+                  <div className="w-full bg-[var(--bg-muted)] flex items-center justify-center p-6 min-h-[210px]">
+                    {product.image ? (
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        width={180}
+                        height={180}
+                        className="object-contain"
+                      />
+                    ) : product.images?.[0] ? (
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        width={180}
+                        height={180}
+                        className="object-contain"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-white/70 flex items-center justify-center text-xs text-[var(--text-muted)]">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-4">
+                    <h3 className="font-semibold text-[15px] mb-2 leading-tight text-[var(--dark-color)]">
+                      {product.name}
+                    </h3>
+
+                    {product.currentPrice ?? product.price ? (
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-lg font-bold text-[var(--dark-color)]">
+                          ₹{product.currentPrice ?? product.price}
+                        </span>
+                        {product.oldPrice && (
+                          <span className="text-sm line-through text-[var(--text-muted)]">
+                            ₹{product.oldPrice}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-[var(--text-muted)] mb-2">
+                        Price unavailable
+                      </div>
+                    )}
+
+                    {product.oldPrice &&
+                      (product.currentPrice ?? product.price) && (
+                        <div className="text-[var(--primary-color)] font-semibold mb-3">
+                          Save – ₹
+                          {(product.oldPrice || 0) -
+                            (product.currentPrice ?? product.price ?? 0)}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              ))}
           </div>
-
-        </div>
-      </div>
-    ))}
-
-  </div>
-</section>
+        </section>
+      )}
 
     </>
   );

@@ -8,6 +8,7 @@ import AddressBook from "../components/AddressBook";
 export default function AccountPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
+  const [userOrders, setUserOrders] = useState([]);
 
   // MAIN PROFILE STATE
   const [profileData, setProfileData] = useState({ ...profile });
@@ -28,6 +29,8 @@ export default function AccountPage() {
   useEffect(() => {
     const id = localStorage.getItem("loggedInUser");
     if (!id) router.push("/login");
+    const storedOrders = JSON.parse(localStorage.getItem("orderHistory") || "[]");
+    setUserOrders(storedOrders);
   }, [router]);
 
   // LOGOUT
@@ -220,27 +223,72 @@ export default function AccountPage() {
           {/* ORDERS TAB */}
           {activeTab === "orders" && (
             <>
-              {orders.map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between bg-[var(--light-color)] p-4 rounded-xl shadow mb-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <img src={o.img} className="w-16 h-16 rounded object-cover" />
+              {(userOrders.length ? userOrders : orders).map((o, idx) => {
+                const orderId = o.orderId || o.id;
+                const previewItem = o.items?.[0];
+                const title =
+                  o.title ||
+                  (previewItem
+                    ? `${previewItem.title}${
+                        (o.items?.length ?? 0) > 1
+                          ? ` +${(o.items?.length ?? 0) - 1} more`
+                          : ""
+                      }`
+                    : "Order");
+                const displayPrice =
+                  o.summary?.total ||
+                  o.summary?.price ||
+                  o.price ||
+                  previewItem?.price ||
+                  0;
+                const status = o.status || "pending";
+                const date = o.orderDate || o.date || "—";
+                const imageSrc =
+                  o.img || previewItem?.img || "/assets/Images/ShilajitGold.png";
 
-                    <div>
-                      <h2 className="font-semibold text-lg">{o.title}</h2>
-                      <p className="text-sm text-gray-600">Order ID: {o.orderId}</p>
+                return (
+                  <div
+                    key={`${orderId}-${idx}`}
+                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--light-color)] p-4 rounded-xl shadow mb-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img src={imageSrc} className="w-16 h-16 rounded object-cover" />
+
+                      <div>
+                        <h2 className="font-semibold text-lg">{title}</h2>
+                        <p className="text-sm text-gray-600">Order ID: {orderId}</p>
+                        <p className="text-xs text-gray-500">Placed on: {date}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col md:items-end gap-2">
+                      <div className="text-right">
+                        <p className="font-semibold text-lg">
+                          ₹{Number(displayPrice).toFixed(2)}
+                        </p>
+                        <span className="inline-flex items-center gap-1 text-sm capitalize">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              status === "delivered"
+                                ? "bg-green-500"
+                                : status === "cancelled"
+                                ? "bg-red-500"
+                                : "bg-yellow-400"
+                            }`}
+                          />
+                          {status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/order/${orderId}`)}
+                        className="px-4 py-2 rounded-lg border border-[var(--primary-color)] text-[var(--primary-color)] font-medium hover:bg-[var(--primary-color)] hover:text-[var(--light-color)] transition text-sm"
+                      >
+                        Track Order
+                      </button>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <p className="font-semibold text-lg">₹{o.price}.00</p>
-                    ...
-                  </div>
-                </div>
-              ))}
-
+                );
+              })}
             </>
           )}
 
