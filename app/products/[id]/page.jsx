@@ -161,29 +161,28 @@ export default function ProductDetails({ params }) {
   };
 
 
-  const buyNow = () => {
-    if (!product) return;
+ const buyNow = () => {
+  if (!product) return;
 
-    // Cart me item add karna (1 qty default)
-    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  // CLEAR old buy-now product first
+  localStorage.removeItem("checkoutProduct");
 
-    const existing = cart.find((p) => p.id === product.id);
+  // SAVE only this product
+  localStorage.setItem(
+    "checkoutProduct",
+    JSON.stringify({
+      id: product.id,
+      name: product.name,
+      currentPrice: product.currentPrice,
+      qty: quantity,
+      image: product.images?.[0],
+    })
+  );
 
-    if (existing) {
-      existing.qty = 1; // Buy Now = Only one unit
-    } else {
-      cart.push({ ...product, qty: 1 });
-    }
 
-    localStorage.setItem("cart", JSON.stringify(cart));
 
-    try {
-      window.dispatchEvent(new Event("localStorageUpdated"));
-    } catch (e) { }
-
-    // Checkout page pe redirect
-    router.push("/checkout");
-  };
+  router.push("/checkout");
+};
 
   return (
     <>

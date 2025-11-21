@@ -25,6 +25,12 @@ export default function Cart() {
       const clean = stored.filter((p) => p && p.id);
       setCart(clean);
     }
+
+    // Read applied coupon if exists
+    const savedCoupon = JSON.parse(localStorage.getItem("appliedCoupon"));
+    if (savedCoupon?.discount) {
+      setDiscountPercent(savedCoupon.discount);
+    }
   }, []);
 
   // Quantity Update
@@ -56,20 +62,28 @@ export default function Cart() {
   const discountAmount = (total * discountPercent) / 100;
   const finalTotal = total - discountAmount;
 
-  // Apply Coupon (silent)
+  // Apply Coupon (GLOBAL)
   const applyCoupon = () => {
     const code = coupon.trim().toUpperCase();
 
     if (code === "DISCOUNT10") {
-      setDiscountPercent(10); // 10% OFF
+      setDiscountPercent(10);
+
+      localStorage.setItem(
+        "appliedCoupon",
+        JSON.stringify({
+          code: "DISCOUNT10",
+          discount: 10,
+        })
+      );
     } else {
-      setDiscountPercent(0); // Invalid = remove discount
+      setDiscountPercent(0);
+      localStorage.removeItem("appliedCoupon");
     }
   };
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-12">
-
       {/* HEADER */}
       <div className="hidden md:grid grid-cols-12 bg-[var(--light-color)] rounded-xl px-6 py-4 shadow-sm mb-6">
         <div className="col-span-6 font-semibold text-[var(--primary-color)]">Product</div>
@@ -183,11 +197,13 @@ export default function Cart() {
 
           <hr />
 
-          {/* DISCOUNT */}
+          {/* Discount */}
           {discountPercent > 0 && (
             <div className="flex justify-between my-3 text-[var(--dark-color)]">
               <span className="font-medium">Discount ({discountPercent}%):</span>
-              <span className="font-semibold text-green-600">-₹{discountAmount.toFixed(2)}</span>
+              <span className="font-semibold text-green-600">
+                -₹{discountAmount.toFixed(2)}
+              </span>
             </div>
           )}
 
@@ -207,7 +223,14 @@ export default function Cart() {
             <span className="font-semibold">₹{finalTotal.toFixed(2)}</span>
           </div>
 
-          <button className="w-full bg-[var(--primary-color)] text-[var(--light-color)] py-3 rounded-lg font-medium hover:opacity-95">
+          <button
+            onClick={() => {
+              // ⭐ VERY IMPORTANT
+              localStorage.removeItem("checkoutProduct");
+              window.location.href = "/checkout";
+            }}
+            className="w-full bg-[var(--primary-color)] text-[var(--light-color)] py-3 rounded-lg font-medium hover:opacity-95"
+          >
             Proceed to checkout
           </button>
         </div>

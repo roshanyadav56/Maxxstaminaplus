@@ -8,6 +8,11 @@ export default function Checkout() {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [cartItems, setCartItems] = useState([]);
+  const [discount, setDiscount] = useState(0);
+
+  // NEW: coupon input
+  const [couponInput, setCouponInput] = useState("");
+
   const [formValues, setFormValues] = useState({
     firstName: "",
     lastName: "",
@@ -20,15 +25,23 @@ export default function Checkout() {
     address: "",
     tag: "HOME",
   });
+  const [showPopup, setShowPopup] = useState(false);
+  const [deliveryDate, setDeliveryDate] = useState("");
 
   const [openMenu, setOpenMenu] = useState(null);
 
+  // NEW: selected address index
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  // Load data on mount
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("userAddresses")) || [];
     setSavedAddresses(stored);
+
+    // If no addresses -> show form
     if (stored.length === 0) setShowForm(true);
 
-    // Read cart from localStorage
+    // Load cart
     const loadCart = () => {
       try {
         const cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -40,9 +53,37 @@ export default function Checkout() {
 
     loadCart();
 
-    // Listen for cart updates from custom event
+    // BUY NOW logic (single product checkout)
+    const singleProduct = JSON.parse(localStorage.getItem("checkoutProduct"));
+    const fullCart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    if (singleProduct) {
+      setCartItems([singleProduct]);
+    } else {
+      setCartItems(fullCart);
+    }
+
+    // Read applied coupon
+    const savedCoupon = JSON.parse(localStorage.getItem("appliedCoupon"));
+    setDiscount(savedCoupon?.discount || 0);
+
+    // Read selected address index if previously stored
+    const savedIndexRaw = localStorage.getItem("selectedCheckoutAddressIndex");
+    const savedIndex =
+      savedIndexRaw !== null && !isNaN(Number(savedIndexRaw))
+        ? Number(savedIndexRaw)
+        : null;
+
+    if (savedIndex !== null && stored[savedIndex]) {
+      setSelectedAddress(savedIndex);
+    } else if (stored.length > 0) {
+      // default to first address if none saved
+      setSelectedAddress(0);
+      localStorage.setItem("selectedCheckoutAddressIndex", "0");
+    }
+
+    // listen to storage changes
     window.addEventListener("localStorageUpdated", loadCart);
-    // Also listen for storage events (works cross-tab and within-tab in some cases)
     window.addEventListener("storage", loadCart);
 
     return () => {
@@ -51,6 +92,32 @@ export default function Checkout() {
     };
   }, []);
 
+  // PRICE CALCULATIONS
+  const subtotal = cartItems.reduce(
+    (sum, p) => sum + p.currentPrice * (p.qty || 1),
+    0
+  );
+
+  const discountAmount = (subtotal * discount) / 100;
+  const finalTotal = subtotal - discountAmount;
+
+  // COUPON APPLY
+  const applyCheckoutCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+
+    if (code === "DISCOUNT10") {
+      setDiscount(10);
+      localStorage.setItem(
+        "appliedCoupon",
+        JSON.stringify({ code: "DISCOUNT10", discount: 10 })
+      );
+    } else {
+      setDiscount(0);
+      localStorage.removeItem("appliedCoupon");
+    }
+  };
+
+  // FORM HANDLERS
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -60,7 +127,7 @@ export default function Checkout() {
     e.preventDefault();
     const newAddr = {
       tag: formValues.tag || "HOME",
-      name: `${formValues.firstName} ${formValues.lastName}`,
+      name: `${formValues.firstName} ${formValues.lastName}`.trim(),
       phone: formValues.phone,
       address: `${formValues.address}, ${formValues.city}, ${formValues.state}, ${formValues.country} - ${formValues.pincode}`,
     };
@@ -69,6 +136,15 @@ export default function Checkout() {
     localStorage.setItem("userAddresses", JSON.stringify(updated));
     setSavedAddresses(updated);
     setShowForm(false);
+
+    // select newly added address
+    const newIndex = updated.length - 1;
+    setSelectedAddress(newIndex);
+    localStorage.setItem(
+      "selectedCheckoutAddressIndex",
+      String(newIndex)
+    );
+
     setFormValues({
       firstName: "",
       lastName: "",
@@ -92,6 +168,38 @@ export default function Checkout() {
     setSavedAddresses(updated);
     localStorage.setItem("userAddresses", JSON.stringify(updated));
     setOpenMenu(null);
+
+    // adjust selectedAddress if needed
+    if (selectedAddress === null) return;
+
+    if (index === selectedAddress) {
+      // deleted the selected one
+      if (updated.length === 0) {
+        setSelectedAddress(null);
+        localStorage.removeItem("selectedCheckoutAddressIndex");
+        localStorage.removeItem("selectedCheckoutAddress");
+      } else {
+        // choose nearest valid index (0)
+        const newIndex = 0;
+        setSelectedAddress(newIndex);
+        localStorage.setItem("selectedCheckoutAddressIndex", String(newIndex));
+        localStorage.setItem(
+          "selectedCheckoutAddress",
+          JSON.stringify(updated[newIndex])
+        );
+      }
+    } else if (index < selectedAddress) {
+      // shift left by one
+      const newIndex = selectedAddress - 1;
+      setSelectedAddress(newIndex);
+      localStorage.setItem("selectedCheckoutAddressIndex", String(newIndex));
+      if (updated[newIndex]) {
+        localStorage.setItem(
+          "selectedCheckoutAddress",
+          JSON.stringify(updated[newIndex])
+        );
+      }
+    }
   };
 
   const useCurrentLocation = () => {
@@ -119,16 +227,70 @@ export default function Checkout() {
                 : "",
             }));
           } catch (err) {
-            console.error("Error fetching location:", err);
+            console.error("Error:", err);
           }
         },
-        (err) => {
-          alert("Unable to get location: " + err.message);
-        }
+        (err) => alert("Unable to get location: " + err.message)
       );
     } else {
-      alert("Geolocation is not supported by your browser.");
+      alert("Geolocation is not supported.");
     }
+  };
+
+  // When user selects an address (radio)
+  const handleSelectAddress = (i) => {
+    setSelectedAddress(i);
+    localStorage.setItem("selectedCheckoutAddressIndex", String(i));
+    if (savedAddresses[i]) {
+      localStorage.setItem(
+        "selectedCheckoutAddress",
+        JSON.stringify(savedAddresses[i])
+      );
+    }
+  };
+
+  // PLACE ORDER
+  const handlePlaceOrder = () => {
+    if (savedAddresses.length > 0 && selectedAddress === null) {
+      alert("Please select a delivery address!");
+      return;
+    }
+
+    if (savedAddresses.length === 0) {
+      alert("Please add an address before placing the order.");
+      return;
+    }
+
+    const chosenAddress = savedAddresses[selectedAddress];
+
+    // persist chosen address
+    localStorage.setItem(
+      "selectedCheckoutAddress",
+      JSON.stringify(chosenAddress)
+    );
+    localStorage.setItem(
+      "selectedCheckoutAddressIndex",
+      String(selectedAddress)
+    );
+
+    // remove checkoutProduct if any
+    localStorage.removeItem("checkoutProduct");
+
+    const today = new Date();
+    today.setDate(today.getDate() + 3);
+
+    const formattedDate = today.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    setDeliveryDate(formattedDate);
+    setShowPopup(true);
+
+    // OPTIONAL: Clear cart or keep as-is depending on flow
+    // localStorage.removeItem("cart");
+    // setCartItems([]);
   };
 
   return (
@@ -151,13 +313,25 @@ export default function Checkout() {
             </button>
           )}
 
+          {/* Saved addresses list */}
           {!showForm &&
             savedAddresses.length > 0 &&
             savedAddresses.map((addr, i) => (
               <div
                 key={i}
-                className="border border-[#c9c9c9] rounded-xl p-5 mt-5 bg-[var(--light-color)] shadow-sm relative"
+                className={`relative border ${selectedAddress === i ? "ring-2 ring-[var(--primary-color)]" : "border-[#c9c9c9]"} rounded-xl p-5 mt-5 bg-[var(--light-color)] shadow-sm`}
               >
+                {/* SELECT ADDRESS RADIO BUTTON */}
+                <label className="absolute top-6 left-5">
+                  <input
+                    type="radio"
+                    name="selectedAddress"
+                    checked={selectedAddress === i}
+                    onChange={() => handleSelectAddress(i)}
+                    className="w-5 h-5 accent-[var(--primary-color)] cursor-pointer"
+                  />
+                </label>
+
                 {/* Menu button */}
                 <button
                   onClick={() => toggleMenu(i)}
@@ -178,7 +352,7 @@ export default function Checkout() {
                   </div>
                 )}
 
-                <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-[var(--primary-color)] text-[var(--light-color)] uppercase">
+                <span className="inline-block px-3 py-1 ms-7 rounded-full text-sm font-medium bg-[var(--primary-color)] text-[var(--light-color)] uppercase">
                   {addr.tag}
                 </span>
 
@@ -197,6 +371,7 @@ export default function Checkout() {
               </div>
             ))}
 
+          {/* ADD ADDRESS FORM */}
           {showForm && (
             <>
               <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--light-color)] px-4 sm:px-8 py-4 border border-[var(--bg-muted)] border-b-0 rounded-t-2xl shadow-sm gap-3 sm:gap-0">
@@ -373,70 +548,138 @@ export default function Checkout() {
           )}
         </div>
 
-        {/* ░░░ RIGHT SIDE ░░░ */}
-        <div className="border border-[var(--bg-muted)] rounded-xl shadow-sm p-4 sm:p-6 bg-[var(--light-color)] mt-8 lg:mt-0">
-          {/* PRODUCT LIST */}
+        {/* RIGHT SIDE SUMMARY */}
+        <div className="border border-[var(--bg-muted)] rounded-xl shadow-sm p-4 sm:p-6 bg-[var(--light-color)]">
           {cartItems.length === 0 ? (
-            <p className="text-center text-[var(--text-muted)] py-6">Your cart is empty</p>
+            <p className="text-center text-[var(--text-muted)] py-6">
+              Your cart is empty
+            </p>
           ) : (
             <>
               {cartItems.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center text-[var(--dark-color)] font-medium py-3 border-b border-[var(--bg-muted)]">
+                <div
+                  key={idx}
+                  className="flex justify-between items-center text-[var(--dark-color)] font-medium py-3 border-b border-[var(--bg-muted)]"
+                >
                   <div>
-                    <p className="text-sm sm:text-base">{item.name}</p>
-                    <p className="text-xs text-[var(--text-muted)]">Qty: {item.qty || 1}</p>
+                    <p className="text-sm">{item.name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Qty: {item.qty || 1}
+                    </p>
                   </div>
-                  <b className="text-sm sm:text-base">₹{(item.currentPrice * (item.qty || 1)).toFixed(2)}</b>
+                  <b>₹{(item.currentPrice * (item.qty || 1)).toFixed(2)}</b>
                 </div>
               ))}
 
               {/* PRICES */}
               <div className="mt-6 space-y-2 text-[var(--dark-color)]">
+                {/* Subtotal */}
                 <div className="flex justify-between border-b border-[var(--bg-muted)] pb-2">
                   <span className="text-sm font-medium">Subtotal:</span>
-                  <b className="text-sm">₹{cartItems.reduce((s, p) => s + (p.currentPrice * (p.qty || 1)), 0).toFixed(2)}</b>
+                  <b className="text-sm">₹{subtotal.toFixed(2)}</b>
                 </div>
 
+                {/* Discount */}
+                {discount > 0 && (
+                  <div className="flex justify-between border-b border-[var(--bg-muted)] pb-2">
+                    <span className="text-sm font-medium">
+                      Discount ({discount}%):
+                    </span>
+                    <b className="text-sm text-green-600">
+                      -₹{discountAmount.toFixed(2)}
+                    </b>
+                  </div>
+                )}
+
+                {/* Shipping */}
                 <div className="flex justify-between border-b border-[var(--bg-muted)] pb-2">
                   <span className="text-sm font-medium">Shipping:</span>
                   <b className="text-sm text-[var(--primary-color)]">Free</b>
                 </div>
 
+                {/* Total */}
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>₹{cartItems.reduce((s, p) => s + (p.currentPrice * (p.qty || 1)), 0).toFixed(2)}</span>
+                  <span>₹{finalTotal.toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* PAYMENT */}
-              <div className="mt-6 space-y-3 text-[var(--dark-color)] font-medium">
-                <label className="flex gap-3 items-center cursor-pointer">
-                  <input type="radio" name="payment" /> Bank
-                </label>
-
-                <label className="flex gap-3 items-center cursor-pointer">
-                  <input type="radio" name="payment" defaultChecked /> Cash on delivery
-                </label>
-              </div>
-
-              {/* COUPON */}
-              <div className="mt-6 flex flex-col sm:flex-row gap-2">
+              {/* COUPON INPUT */}
+              <div className="mt-6 w-full flex">
                 <input
-                  className="flex-1 border border-[var(--primary-color)] px-4 py-3 rounded-l-xl text-[var(--dark-color)] placeholder-[var(--text-muted)] outline-none text-sm"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  className="flex-grow border border-[var(--primary-color)] text-[var(--dark-color)] px-4 py-3 rounded-l-xl outline-none text-sm h-12"
                   placeholder="Coupon Code"
                 />
-                <button className="bg-[var(--primary-color)] text-[var(--light-color)] px-6 rounded-r-xl font-medium hover:opacity-95 transition">
+
+                <button
+                  onClick={applyCheckoutCoupon}
+                  className="bg-[var(--primary-color)] text-[var(--light-color)] px-6 rounded-r-xl font-medium hover:opacity-95 transition h-12 text-sm flex items-center"
+                >
                   Apply Coupon
                 </button>
               </div>
 
-              <button className="w-full bg-[var(--primary-color)] text-[var(--light-color)] text-lg font-semibold py-4 rounded-xl mt-6 sm:mt-8 hover:opacity-95 transition">
+              <button
+                onClick={handlePlaceOrder}
+                className="w-full bg-[var(--primary-color)] text-[var(--light-color)] text-lg font-semibold py-4 rounded-xl mt-6 hover:opacity-95"
+              >
                 Place Order
               </button>
             </>
           )}
         </div>
       </div>
+
+      {/* ORDER CONFIRMED POPUP */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-[var(--dark-color)]/50 flex items-center justify-center z-[999] px-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center animate-fadeIn">
+            <h2 className="text-2xl font-bold text-[var(--dark-color)]">
+              Your order is confirmed
+            </h2>
+
+            <p className="text-[var(--text-muted)] mt-2">
+              Thank you for shopping with us. <br />
+              Your order will reach you on <b>{deliveryDate}</b>.
+            </p>
+
+            {/* Show selected address summary */}
+            <div className="mt-4 text-left bg-[var(--light-color)] p-4 rounded-lg border border-[var(--bg-muted)]">
+              <h3 className="font-semibold text-[var(--dark-color)] mb-1">
+                Delivering to:
+              </h3>
+              <p className="text-sm text-[var(--dark-color)]">
+                {selectedAddress !== null && savedAddresses[selectedAddress]
+                  ? `${savedAddresses[selectedAddress].name} • ${savedAddresses[selectedAddress].phone}`
+                  : "No address selected"}
+              </p>
+              <p className="text-sm text-[var(--text-muted)] mt-2 break-words">
+                {selectedAddress !== null && savedAddresses[selectedAddress]
+                  ? savedAddresses[selectedAddress].address
+                  : ""}
+              </p>
+            </div>
+
+            <img
+              src="\assets\Images\order-success.png"
+              className="w-72 mx-auto mt-6"
+              alt="Success"
+            />
+
+            <button
+              onClick={() => {
+                setShowPopup(false);
+                window.location.href = "/";
+              }}
+              className="mt-6 bg-[var(--primary-color)] text-white px-6 py-3 rounded-xl font-semibold"
+            >
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
