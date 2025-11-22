@@ -7,6 +7,7 @@
   --bg-muted: #d4d4d4;
   --text-muted: #6B7280;
   --accent-color: #98171B;
+  --success-color: #16A34A;
 }
 
 @theme inline {

@@ -41,11 +41,6 @@ export const orders = [
   }
 ];
 
-export let wishlist = [
-  { id: 1, title: "MaxxStaminaPlus Oil" },
-  { id: 2, title: "Premium Rose Oil" },
-];
-
 // FULL ORDER DETAILS FOR TRACKING PAGE
 export const orderDetails = {
   orderId: "33546546546526",
@@ -60,31 +55,55 @@ export const orderDetails = {
     delivered: "Mon, 17th Nov",
   },
 
+  // ⭐ MULTIPLE MESSAGE DETAILED TIMELINE (for “See All Updates”)
+  timelineDetails: {
+    confirmed: [
+      { msg: "Your Order has been placed.", time: "Fri, 7 Nov • 8:42am" },
+      { msg: "Seller has processed your order.", time: "Fri, 7 Nov • 12:15pm" },
+      { msg: "Your item has been picked up by delivery partner.", time: "Sat, 8 Nov • 6:18am" }
+    ],
+
+    shipped: [
+      { msg: "Ekart Logistics - FMPC4937998456" },
+      { msg: "Your item has been shipped.", time: "Mon, 10 Nov • 9:31am" },
+      { msg: "Your item has been received in the nearest hub.", time: "Tue, 11 Nov • 7:12pm" }
+    ],
+
+    outForDelivery: [
+      { msg: "Your item is out for delivery.", time: "Sun, 16 Nov • 8:05am" }
+    ],
+
+    delivered: [
+      { msg: "Your item has been delivered.", time: "Mon, 17 Nov • 3:26pm" }
+    ]
+  },
+
   items: [
     {
       id: 1,
       title: "SHILAJIT GOLD (15ml Pack)",
-      price: 2599,
+      price: 459,
       qty: 1,
       img: "/assets/Images/ShilajitGold.png"
     },
     {
       id: 2,
-      title: "SHILAJIT GOLD (15ml Pack)",
-      price: 2599,
-      qty: 2,
+      title: "SHILAJIT GOLD Resin",
+      price: 459,
+      qty: 1,
       img: "/assets/Images/ShilajitGold.png"
     }
   ],
 
-  summary: {
-    price: 918,
-    discountPercent: 20,
-    discount: 918,
-    delivery: 0,
-    tax: 78,
-    total: 812
-  },
+summary: {
+  listingPrice: 1010,     // MUST BE ADDED
+  price: 918,
+  discountPercent: 10,
+  discount: 91.08,
+  delivery: 0,
+  tax: 78,
+  total: 812
+},
 
   payment: {
     method: "Visa **56"
