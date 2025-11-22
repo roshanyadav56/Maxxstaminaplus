@@ -21,7 +21,10 @@ const CategorySlider = () => {
   useEffect(() => {
     const handleResize = () => {
       const w = window.innerWidth;
-      setItemsPerView(w < 640 ? 2 : 6);
+
+      // MOBILE = 4 ITEMS  
+      setItemsPerView(w < 640 ? 4 : 6);
+
       setIndex(0);
     };
 
@@ -49,7 +52,7 @@ const CategorySlider = () => {
         {/* LEFT ARROW */}
         <button
           onClick={prevSlide}
-          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-8 h-8 flex items-center justify-center"
+          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-6 h-6 flex items-center justify-center"
         >
           <FaChevronLeft size={18} />
         </button>
@@ -57,21 +60,27 @@ const CategorySlider = () => {
         {/* SLIDER */}
         <div className="overflow-hidden w-full mx-2 sm:mx-4">
           <div
-            className="flex transition-all duration-300"
-            style={{ transform: `translateX(-${index * (100 / itemsPerView)}%)` }}
+            className="flex transition-all duration"
+            style={{
+              transform: `translateX(-${index * (100 / itemsPerView)}%)`,
+            }}
           >
             {categories.map((item, i) => (
               <div
                 key={i}
                 className="flex flex-col items-center text-center"
-                style={{ flex: `0 0 ${100 / itemsPerView}%` }}
+                style={{
+                  flex: `0 0 ${100 / itemsPerView}%`,
+                }}
               >
                 <img
                   src={item.image}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover"
+                  className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl object-cover"
                   alt={item.name}
                 />
-                <p className="text-[var(--primary-color)] font-base mt-2 text-sm sm:text-base">{item.name}</p>
+                <p className="text-[var(--primary-color)] font-base mt-2 text-xs sm:text-base">
+                  {item.name}
+                </p>
               </div>
             ))}
           </div>
@@ -80,7 +89,7 @@ const CategorySlider = () => {
         {/* RIGHT ARROW */}
         <button
           onClick={nextSlide}
-          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-8 h-8 flex items-center justify-center"
+          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-6 h-6 flex items-center justify-center"
         >
           <FaChevronRight size={18} />
         </button>

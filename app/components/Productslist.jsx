@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { FaRegHeart, FaHeart,FaCartArrowDown } from "react-icons/fa";
+import { FaRegHeart, FaHeart, FaCartArrowDown } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -103,6 +103,7 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
   // ================================
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const c = localStorage.getItem("cart");
@@ -130,192 +131,180 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
   };
 
   // ================================
-  // SORTING + Filters
+  // SORTING + FILTERS
   // ================================
-
   const sortedProducts = useMemo(() => {
-  let sorted = [...products];
+    let sorted = [...products];
 
-  // Filters
-  if (showBestsellerOnly) sorted = sorted.filter((p) => p.isBestseller);
-  if (NewArrivalOnly) sorted = sorted.filter((p) => p.isNewArrival);
+    // Filters
+    if (showBestsellerOnly) sorted = sorted.filter((p) => p.isBestseller);
+    if (NewArrivalOnly) sorted = sorted.filter((p) => p.isNewArrival);
 
-  // Sorting
-  switch (sortBy) {
-    case "priceLowToHigh":
-      sorted.sort((a, b) => a.currentPrice - b.currentPrice);
-      break;
-    case "priceHighToLow":
-      sorted.sort((a, b) => b.currentPrice - a.currentPrice);
-      break;
-    case "under199":
-      sorted = sorted.filter((p) => p.currentPrice <= 199);
-      break;
-    case "under399":
-      sorted = sorted.filter((p) => p.currentPrice <= 399);
-      break;
-    case "under599":
-      sorted = sorted.filter((p) => p.currentPrice <= 599);
-      break;
-    case "aToZ":
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case "zToA":
-      sorted.sort((a, b) => b.name.localeCompare(a.name));
-      break;
-    case "bestseller":
-      sorted = sorted.filter((p) => p.isBestseller);
-      break;
-    case "newarrival":
-      sorted = sorted.filter((p) => p.isNewArrival);
-      break;
-    default:
-      sorted.sort((a, b) => a.id - b.id);
-      break;
-  }
+    // Sorting
+    switch (sortBy) {
+      case "priceLowToHigh":
+        sorted.sort((a, b) => a.currentPrice - b.currentPrice);
+        break;
+      case "priceHighToLow":
+        sorted.sort((a, b) => b.currentPrice - a.currentPrice);
+        break;
+      case "under199":
+        sorted = sorted.filter((p) => p.currentPrice <= 199);
+        break;
+      case "under399":
+        sorted = sorted.filter((p) => p.currentPrice <= 399);
+        break;
+      case "under599":
+        sorted = sorted.filter((p) => p.currentPrice <= 599);
+        break;
+      case "aToZ":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "zToA":
+        sorted.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "bestseller":
+        sorted = sorted.filter((p) => p.isBestseller);
+        break;
+      case "newarrival":
+        sorted = sorted.filter((p) => p.isNewArrival);
+        break;
+      default:
+        sorted.sort((a, b) => a.id - b.id);
+        break;
+    }
 
-  // 🔥 SHOW ONLY TOP 3 for Bestseller OR New Arrival
-  if (showBestsellerOnly || NewArrivalOnly || sortBy === "bestseller" || sortBy === "newarrival") {
-    return sorted.slice(0, 3);
-  }
+    // Show Only Top 4
+    if (showBestsellerOnly || NewArrivalOnly || sortBy === "bestseller" || sortBy === "newarrival") {
+      return sorted.slice(0, 4);
+    }
 
-  return sorted;
-}, [sortBy, showBestsellerOnly, NewArrivalOnly]);
-
+    return sorted;
+  }, [sortBy, showBestsellerOnly, NewArrivalOnly]);
 
   // ================================
   // PRODUCT CARD
   // ================================
   const ProductCard = ({ product }) => {
-  const isWishlisted = wishlist.some((p) => p.id === product.id);
+    const isWishlisted = wishlist.some((p) => p.id === product.id);
 
-  return (
-    <div className="relative group">
-      <Link
-        href={`/products/${product.id}`}
-        className="block bg-[var(--light-color)] rounded-xl shadow-sm p-4 hover:shadow-lg transition-all duration-300 border border-[var(--bg-muted)] relative"
+    return (
+      <div
+        onClick={() => setSelectedProduct(product)}
+        className="relative group cursor-pointer"
       >
-        {/* ❤️ Wishlist */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            toggleWishlist(product);
-          }}
-          className="absolute top-5 left-5 z-30 p-2 rounded-full bg-[var(--light-color)]"
-        >
-          {isWishlisted ? (
-            <FaHeart size={18} className="text-[var(--primary-color)]" />
-          ) : (
-            <FaRegHeart size={20} className="text-[var(--primary-color)]" />
-          )}
-        </button>
+        <div className="block bg-[var(--light-color)] rounded-xl shadow-sm p-4 hover:shadow-lg transition-all duration-300 border border-[var(--bg-muted)] relative">
 
-        {/* Discount Badge (only if NOT new arrival) */}
-        {!product.isNewArrival && (
-          <div className="absolute top-4 right-4 z-30 bg-[var(--primary-color)] text-[var(--light-color)] px-3 py-2 rounded-bl-xl rounded-tr-lg shadow-md text-center">
-            <span className="text-sm font-semibold">{product.discountPercent}%</span>
-            <br />
-            <span className="text-[11px]">OFF</span>
-          </div>
-        )}
-
-        {/* NEW badge */}
-        {product.isNewArrival && (
-          <div className="absolute top-4 right-4 z-30 bg-[var(--accent-color)] text-white px-3 py-1 rounded-bl-xl rounded-tr-lg text-xs font-semibold">
-            NEW
-          </div>
-        )}
-
-        {/* Product Image */}
-        <div className="relative w-full aspect-[4/3] mb-4 overflow-hidden rounded-md bg-[var(--bg-muted)]">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-contain p-6"
-          />
-        </div>
-
-        {/* Name */}
-        <h3 className="font-semibold text-[var(--dark-color)] text-sm mb-1 px-3 truncate">
-          {product.name}
-        </h3>
-
-        {/* Prices */}
-        <div className="flex items-center gap-3 mb-3 px-3">
-          <span
-            className={`text-lg font-bold ${
-              product.isNewArrival
-                ? "text-[var(--primary-color)]"
-                : "text-[var(--dark-color)]"
-            }`}
+          {/* ❤️ Wishlist */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWishlist(product);
+            }}
+            className="absolute top-5 left-5 z-30 p-2 rounded-full bg-[var(--light-color)]"
           >
-            ₹{product.currentPrice}
-          </span>
+            {isWishlisted ? (
+              <FaHeart size={18} className="text-[var(--primary-color)]" />
+            ) : (
+              <FaRegHeart size={20} className="text-[var(--primary-color)]" />
+            )}
+          </button>
 
-          {/* Old Price (hide for New Arrival) */}
+          {/* Discount Badge */}
           {!product.isNewArrival && (
-            <span className="text-sm line-through text-[var(--text-muted)]">
-              ₹{product.oldPrice}
+            <div className="absolute top-4 right-4 z-30 bg-[var(--primary-color)] text-white px-2 py-1 rounded-bl-lg rounded-tr-lg text-[10px] sm:text-sm shadow-md">
+              <span className="font-semibold">{product.discountPercent}%</span><br />
+              <span className="text-[8px] sm:text-[11px]">OFF</span>
+            </div>
+          )}
+
+          {/* NEW Badge */}
+          {product.isNewArrival && (
+            <div className="absolute top-4 right-4 bg-[var(--accent-color)] text-white px-3 py-1 rounded-bl-xl rounded-tr-lg text-xs font-semibold">
+              NEW
+            </div>
+          )}
+
+          {/* Product Image */}
+          <div className="relative w-full aspect-[4/3] mb-4 overflow-hidden rounded-md bg-[var(--bg-muted)]">
+            <Image src={product.image} alt={product.name} fill className="object-contain p-6" />
+          </div>
+
+          {/* Name */}
+          <h3 className="font-semibold text-[var(--dark-color)] text-sm mb-1 px-3 truncate">
+            {product.name}
+          </h3>
+
+          {/* Prices */}
+          <div className="flex items-center gap-3 mb-3 px-3">
+            <span className="text-lg font-bold text-[var(--dark-color)]">
+              ₹{product.currentPrice}
             </span>
+
+            {!product.isNewArrival && (
+              <span className="text-sm line-through text-[var(--text-muted)]">
+                ₹{product.oldPrice}
+              </span>
+            )}
+          </div>
+
+          {/* Save */}
+          {!product.isNewArrival && (
+            <div className="text-[var(--primary-color)] font-semibold text-sm px-4 mb-3">
+              Save ₹{product.saveAmount}
+            </div>
           )}
         </div>
-
-        {/* Save Amount (hide for New Arrival) */}
-        {!product.isNewArrival && (
-          <div className="text-[var(--primary-color)] font-semibold text-sm px-4 mb-3">
-            Save ₹{product.saveAmount}
-          </div>
-        )}
-
-        {/* Add to Cart – NORMAL PRODUCTS (Hover big button) */}
-        {!product.isNewArrival && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              addToCart(product);
-            }}
-            className="
-              absolute bottom-3 left-1/2 -translate-x-1/2 w-[85%]
-              bg-[var(--primary-color)] text-[var(--light-color)] py-2 rounded-lg font-medium shadow
-              opacity-0 translate-y-4
-              group-hover:opacity-100 group-hover:translate-y-0
-              transition-all duration-300
-            "
-          >
-            Add to Cart
-          </button>
-        )}
-
-        {/* Add to Cart – NEW ARRIVAL (Cart Icon bottom-right) */}
-        {product.isNewArrival && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              addToCart(product);
-            }}
-            className="
-              absolute bottom-5 right-4
-              hover:bg-[var(--primary-color)] hover:text-[var(--light-color)] text-[var(--primary-color)] p-3 rounded-full shadow-md
-              hover:scale-110 transition-all duration-300
-            "
-          >
-            <FaCartArrowDown size={20} />
-          </button>
-        )}
-      </Link>
-    </div>
-  );
-};
-
+      </div>
+    );
+  };
 
   return (
     <section className="max-w-7xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {sortedProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
+
+      {/* ================================
+          POPUP / MODAL
+      ================================= */}
+    {selectedProduct && (
+  <div
+    className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+    onClick={() => setSelectedProduct(null)}   // background click closes popup
+  >
+    <div
+      className="relative w-[90%] max-w-sm bg-white rounded-xl overflow-hidden"
+      onClick={(e) => e.stopPropagation()}  // prevent closing when clicking image container
+    >
+
+      {/* CLOSE BUTTON */}
+      <button
+        className="absolute top-2 right-2 text-white bg-black/60 rounded-full px-2 py-1 z-50"
+        onClick={() => setSelectedProduct(null)}
+      >
+        ✕
+      </button>
+
+      {/* CLICKABLE IMAGE */}
+      <div
+        className="relative w-full h-72 sm:h-96 cursor-pointer"
+        onClick={() => window.location.href = `/products/${selectedProduct.id}`}  
+      >
+        <Image
+          src={selectedProduct.image}
+          alt="product"
+          fill
+          className="object-contain bg-white p-4"
+        />
+      </div>
+
+    </div>
+  </div>
+)}
+
     </section>
   );
 }
