@@ -7,7 +7,7 @@ import { MdHealthAndSafety } from "react-icons/md";
 
 export default function MissionSection() {
   return (
-    <section className="max-w-7xl mx-auto px-6 py-14 bg-[var(--light-color)] rounded-2xl">
+    <section className="max-w-7xl mx-auto px-6 py-6 sm:py-14 bg-[var(--light-color)] rounded-2xl">
  
       <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
 

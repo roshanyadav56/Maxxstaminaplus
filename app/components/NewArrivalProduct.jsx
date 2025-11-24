@@ -8,7 +8,7 @@ import Productss from "./Productslist";
 export default function SortingBar() {
   return (
     <>
-    <div className="max-w-7xl mx-auto px-8 sm:px-4 lg:px-6 my-10 mt-15 rounded-xl flex justify-between items-center">
+    <div className="max-w-7xl mx-auto px-8 sm:px-4 lg:px-6 my-0 sm:my-10 mt-5 sm:mt-15 rounded-xl flex justify-between items-center">
       
       {/* Left Heading */}
       <h2 className="text-lg sm:text-2xl font-bold text-[var(--dark-color)]">

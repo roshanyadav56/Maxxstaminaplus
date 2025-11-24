@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const CategorySlider = () => {
@@ -14,18 +14,16 @@ const CategorySlider = () => {
     { name: "Ayurvedic", image: "/assets/Images/testmonial.png" },
   ];
 
-  const [index, setIndex] = useState(0);
-  const [itemsPerView, setItemsPerView] = useState(6);
+  const [itemsPerView, setItemsPerView] = useState(4);
+  const trackRef = useRef(null);
 
-  // Responsive itemsPerView
   useEffect(() => {
     const handleResize = () => {
       const w = window.innerWidth;
 
-      // MOBILE = 4 ITEMS  
-      setItemsPerView(w < 640 ? 4 : 6);
-
-      setIndex(0);
+      if (w < 640) setItemsPerView(4);      // MOBILE = 4 items only
+      else if (w < 900) setItemsPerView(5); // Tablet
+      else setItemsPerView(6);              // Desktop
     };
 
     handleResize();
@@ -33,52 +31,54 @@ const CategorySlider = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const nextSlide = () => {
-    if (index < categories.length - itemsPerView) {
-      setIndex(prev => prev + 1);
-    }
-  };
+  const scroll = (dir) => {
+    const track = trackRef.current;
+    if (!track) return;
 
-  const prevSlide = () => {
-    if (index > 0) {
-      setIndex(prev => prev - 1);
-    }
+    const amount = track.clientWidth * 0.9;
+    track.scrollTo({
+      left: dir === "next" ? track.scrollLeft + amount : track.scrollLeft - amount,
+      behavior: "smooth",
+    });
   };
 
   return (
-    <div className="w-full py-6">
-      <div className="max-w-6xl mx-auto px-8 sm:px-4 lg:px-6 flex items-center justify-center">
+    <div className="w-full py-2 sm:py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
 
-        {/* LEFT ARROW */}
+        {/* LEFT ARROW — hide on mobile */}
         <button
-          onClick={prevSlide}
-          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-6 h-6 flex items-center justify-center"
+          onClick={() => scroll("prev")}
+          className="hidden md:flex items-center justify-center border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 mr-3"
         >
-          <FaChevronLeft size={18} />
+          <FaChevronLeft size={16} />
         </button>
 
         {/* SLIDER */}
-        <div className="overflow-hidden w-full mx-2 sm:mx-4">
-          <div
-            className="flex transition-all duration"
-            style={{
-              transform: `translateX(-${index * (100 / itemsPerView)}%)`,
-            }}
-          >
+        <div
+          ref={trackRef}
+          className="overflow-x-auto no-scrollbar w-full mx-2 sm:mx-4"
+          style={{
+            scrollBehavior: "smooth",
+            WebkitOverflowScrolling: "touch",
+            scrollSnapType: "x mandatory",
+          }}
+        >
+          <div className="flex gap-2">
             {categories.map((item, i) => (
               <div
                 key={i}
-                className="flex flex-col items-center text-center"
+                className="category-item flex-shrink-0 flex flex-col items-center text-center"
                 style={{
-                  flex: `0 0 ${100 / itemsPerView}%`,
+                  width: `${100 / itemsPerView}%`,
+                  scrollSnapAlign: "start",
                 }}
               >
                 <img
                   src={item.image}
-                  className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl object-cover"
-                  alt={item.name}
+                  className="w-10 h-10 sm:w-24 sm:h-24 rounded sm:rounded-2xl object-cover"
                 />
-                <p className="text-[var(--primary-color)] font-base mt-2 text-xs sm:text-base">
+                <p className="text-[var(--primary-color)] font-medium mt-2 text-xs sm:text-sm">
                   {item.name}
                 </p>
               </div>
@@ -86,12 +86,12 @@ const CategorySlider = () => {
           </div>
         </div>
 
-        {/* RIGHT ARROW */}
+        {/* RIGHT ARROW — hide on mobile */}
         <button
-          onClick={nextSlide}
-          className="border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 w-6 h-6 flex items-center justify-center"
+          onClick={() => scroll("next")}
+          className="hidden md:flex items-center justify-center border border-[var(--primary-color)] text-[var(--primary-color)] rounded-full p-2 ml-3"
         >
-          <FaChevronRight size={18} />
+          <FaChevronRight size={16} />
         </button>
 
       </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { use } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiHeart, FiShare2 } from "react-icons/fi";
@@ -16,6 +16,19 @@ export default function ProductDetails({ params }) {
 
   const router = useRouter();
   const { id } = use(params);
+
+  // zoom states
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [isZooming, setIsZooming] = useState(false);
+
+  // refs for throttling & container rect access
+  const zoomRef = useRef(false);
+  const zoomContainerRef = useRef(null);
+
+  // 360 states
+  const [is360, setIs360] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [dragStartX, setDragStartX] = useState(null);
 
   const allProducts = [
     {
@@ -84,6 +97,24 @@ export default function ProductDetails({ params }) {
     },
   ];
 
+  // 360 drag handlers
+  const startDrag = (e) => {
+    // ensure only left button
+    if (e.button !== undefined && e.button !== 0) return;
+    setDragStartX(e.clientX);
+  };
+
+  const duringDrag = (e) => {
+    if (dragStartX === null) return;
+    const diff = e.clientX - dragStartX;
+    setRotation((prev) => prev + diff * 0.4); // control sensitivity
+    setDragStartX(e.clientX);
+  };
+
+  const stopDrag = () => {
+    setDragStartX(null);
+  };
+
   const product = allProducts.find((p) => p.id === Number(id));
 
   const [quantity, setQuantity] = useState(1);
@@ -149,6 +180,7 @@ export default function ProductDetails({ params }) {
       </div>
     );
   }
+
   const shareOnWhatsApp = () => {
     const productName = product.name;
     const productUrl = typeof window !== "undefined" ? window.location.href : "";
@@ -161,28 +193,56 @@ export default function ProductDetails({ params }) {
   };
 
 
- const buyNow = () => {
-  if (!product) return;
+  const buyNow = () => {
+    if (!product) return;
 
-  // CLEAR old buy-now product first
-  localStorage.removeItem("checkoutProduct");
+    // CLEAR old buy-now product first
+    localStorage.removeItem("checkoutProduct");
 
-  // SAVE only this product
-  localStorage.setItem(
-    "checkoutProduct",
-    JSON.stringify({
-      id: product.id,
-      name: product.name,
-      currentPrice: product.currentPrice,
-      qty: quantity,
-      image: product.images?.[0],
-    })
-  );
+    // SAVE only this product
+    localStorage.setItem(
+      "checkoutProduct",
+      JSON.stringify({
+        id: product.id,
+        name: product.name,
+        currentPrice: product.currentPrice,
+        qty: quantity,
+        image: product.images?.[0],
+      })
+    );
 
+    router.push("/checkout");
+  };
 
+  // ------------------------------
+  // ZOOM HANDLER (throttled via requestAnimationFrame)
+  // ------------------------------
+  const handleZoomMove = (e) => {
+    if (is360) return; // do not update zoom while 360 mode is active
+    if (!isZooming) return;
 
-  router.push("/checkout");
-};
+    if (zoomRef.current) return; // already scheduled
+    zoomRef.current = true;
+
+    requestAnimationFrame(() => {
+      if (!zoomContainerRef.current) {
+        zoomRef.current = false;
+        return;
+      }
+
+      const rect = zoomContainerRef.current.getBoundingClientRect();
+      // use clientX/clientY for consistent behavior
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      // clamp values between 0 and 100 to avoid weird transforms
+      const cx = Math.min(100, Math.max(0, x));
+      const cy = Math.min(100, Math.max(0, y));
+
+      setZoomPosition({ x: cx, y: cy });
+      zoomRef.current = false;
+    });
+  };
 
   return (
     <>
@@ -200,41 +260,101 @@ export default function ProductDetails({ params }) {
           {/* LEFT: Image Carousel (Fixed) */}
           <div className="flex flex-col gap-4">
             {/* Main Image */}
-            <div className="relative w-full aspect-square bg-[var(--bg-muted)] rounded-lg overflow-hidden shadow-sm">
-              <Image
-                src={productImages[currentImageIndex]}
-                alt={`${product.name} - Image ${currentImageIndex + 1}`}
-                fill
-                className="object-contain p-6"
-              />
+            <div
+              ref={zoomContainerRef}
+              className="relative w-full aspect-square bg-[var(--bg-muted)] rounded-lg shadow-sm overflow-visible"
+              onMouseMove={(e) => {
+                // If 360 active, we'll handle rotation in mouse move only when dragging (see onMouseDown)
+                if (is360) {
+                  // if dragging, duringDrag will handle rotation (duringDrag is attached below via onMouseMove when is360)
+                  return;
+                }
+                handleZoomMove(e);
+              }}
+              onMouseEnter={() => { if (!is360) setIsZooming(true); }}
+              onMouseLeave={() => {
+                setIsZooming(false);
+                zoomRef.current = false;
+                stopDrag();
+              }}
+              onMouseDown={(e) => {
+                // Start drag only for 360 mode
+                if (is360) startDrag(e);
+              }}
+              onMouseUp={(e) => {
+                if (is360) stopDrag(e);
+              }}
+              onMouseMoveCapture={(e) => {
+                // If is360 and dragging, call duringDrag from the capture phase to ensure it runs.
+                if (is360 && dragStartX !== null) {
+                  duringDrag(e);
+                }
+              }}
+            >
+              {is360 ? (
+                <div
+                  className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+                >
+                  <Image
+                    src={productImages[currentImageIndex]}
+                    alt="360-view"
+                    fill
+                    draggable={false}
+                    className="object-contain p-6 select-none"
+                    style={{
+                      transform: `rotateY(${rotation}deg)`,
+                      transition: dragStartX ? "none" : "transform 0.15s ease-out"
+                    }}
+                  />
+                </div>
+              ) : (
+                <Image
+                  src={productImages[currentImageIndex]}
+                  alt={`${product.name} - Image ${currentImageIndex + 1}`}
+                  fill
+                  className="object-contain p-6"
+                />
+              )}
 
-              {/* Left Arrow */}
+
+              {/* LEFT Arrow */}
               <button
-                onClick={() => setCurrentImageIndex((currentImageIndex - 1 + productImages.length) % productImages.length)}
+                onClick={() =>
+                  setCurrentImageIndex(
+                    (currentImageIndex - 1 + productImages.length) % productImages.length
+                  )
+                }
                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-[var(--light-color)] rounded-full p-2 shadow hover:bg-[var(--bg-muted)] transition invisible"
               >
                 <span className="text-[var(--primary-color)] text-lg">‹</span>
               </button>
 
-              {/* Right Arrow */}
+              {/* RIGHT Arrow */}
               <button
-                onClick={() => setCurrentImageIndex((currentImageIndex + 1) % productImages.length)}
+                onClick={() =>
+                  setCurrentImageIndex((currentImageIndex + 1) % productImages.length)
+                }
                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-[var(--light-color)] rounded-full p-2 shadow hover:bg-[var(--bg-muted)] transition invisible"
               >
                 <span className="text-[var(--primary-color)] text-lg">›</span>
               </button>
 
-              {/* Sold & Rating Badge (Top Left) */}
+              {/* Sold & Rating Badge */}
               <div className="absolute top-4 left-4 flex flex-col gap-1">
-                <div className="text-xs font-bold bg-[var(--light-color)] rounded-lg px-3 py-2 shadow  text-[var(--primary-color)]">1,238 <span className="text-[var(--dark-color)]">Sold</span></div>
-                <div className="text-sm font-semibold bg-[var(--light-color)] rounded-lg px-3 py-2 w-fit shadow text-[var(--dark-color)]"><span className="text-yellow-400">★</span> 4.5</div>
+                <div className="text-xs font-bold bg-[var(--light-color)] rounded-lg px-3 py-2 shadow text-[var(--primary-color)]">
+                  1,238 <span className="text-[var(--dark-color)]">Sold</span>
+                </div>
+                <div className="text-sm font-semibold bg-[var(--light-color)] rounded-lg px-3 py-2 shadow text-[var(--dark-color)]">
+                  <span className="text-yellow-400">★</span> 4.5
+                </div>
               </div>
 
-              {/* Wishlist & Share (Top Right) */}
+              {/* Wishlist + Share */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 <button
                   onClick={toggleWishlist}
-                  className={`p-3 rounded-full shadow transition ${isWishlisted ? "bg-[var(--primary-color)]" : "bg-[var(--light-color)]"}`}
+                  className={`p-3 rounded-full shadow transition ${isWishlisted ? "bg-[var(--primary-color)]" : "bg-[var(--light-color)]"
+                    }`}
                 >
                   {isWishlisted ? (
                     <AiFillHeart size={20} className="text-[var(--light-color)]" />
@@ -250,6 +370,40 @@ export default function ProductDetails({ params }) {
                 </button>
               </div>
 
+
+              {/* 🔥 RIGHT SIDE ZOOM BOX — Flipkart Style */}
+              {!is360 && isZooming && (
+                <div
+                  className="hidden md:block absolute top-0 left-full ml-10 w-full aspect-square border rounded-lg overflow-hidden shadow-xl bg-white z-[999]"
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  <Image
+                    src={productImages[currentImageIndex]}
+                    alt="zoomed"
+                    fill
+                    className="object-cover"
+                    style={{
+                      transform: `translate(-${zoomPosition.x}%, -${zoomPosition.y}%) scale(2.5)`,
+                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    }}
+                  />
+                </div>
+              )}
+
+
+              <button
+                onClick={() => {
+                  setIs360(!is360);
+                  // ensure zoom off when entering 360
+                  setIsZooming(false);
+                  zoomRef.current = false;
+                  stopDrag();
+                  setRotation(0); // reset rotation if you want; remove if you want persistent
+                }}
+                className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-1 rounded-lg z-[50]"
+              >
+                {is360 ? "Stop 360°" : "View 360°"}
+              </button>
             </div>
 
             {/* Thumbnail Carousel */}

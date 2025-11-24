@@ -1,4 +1,3 @@
-// app/about/page.jsx
 import Image from "next/image";
 import TestimonialSlider from "../components/TestimonialSlider";
 

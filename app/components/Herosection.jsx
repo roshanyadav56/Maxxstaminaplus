@@ -5,12 +5,11 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const slides = [
     {
-        image: "/assets/images/hero.png",
+        video: "/assets/video/heroslider.mp4",
     },
     {
-        image: "/assets/images/hero.png",
+        video: "/assets/video/ProductVideo1.mp4",
     },
-    // आप यहाँ और slides add कर सकते हैं
 ];
 
 export default function HeroSlider() {
@@ -19,25 +18,23 @@ export default function HeroSlider() {
     const nextSlide = () => setCurrent((prev) => (prev + 1) % slides.length);
     const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
 
-    // Optional: Auto slide every 5 sec
+    // Auto slide
     useEffect(() => {
         const interval = setInterval(nextSlide, 5000);
         return () => clearInterval(interval);
     }, []);
 
-    const { title, subtitle, image, buttonText } = slides[current];
+    // FIX: get active slide data
+    const activeSlide = slides[current];
 
     return (
         <section className="relative max-w-7xl mx-auto h-full flex items-center justify-center overflow-hidden">
 
-            {/* Center Product Image */}
-            <div className="relative z-10 flex justify-center">
-                <img
-                    src={image}
-                    alt="Product"
-                    className="w-full drop-shadow-2xl"
-                    draggable={false}
-                />
+            {/* Center Video */}
+            <div className="relative z-10 flex justify-center w-full">
+                <video autoPlay loop muted className="w-full h-[500px] object-cover">
+                    <source src={activeSlide.video} type="video/mp4" />
+                </video>
             </div>
 
             {/* Left Arrow */}

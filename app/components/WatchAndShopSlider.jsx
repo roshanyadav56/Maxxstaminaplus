@@ -46,8 +46,8 @@ export default function WatchAndShopSlider() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-14">
-      <h2 className="text-center text-3xl font-bold text-[var(--primary-color)] mb-8">
+    <div className="max-w-7xl mx-auto px-4 py-5 sm:py-14">
+      <h2 className="text-center text-lg sm:text-3xl font-bold text-[var(--primary-color)] mb-3 sm:mb-8">
         WATCH AND SHOP
       </h2>
 

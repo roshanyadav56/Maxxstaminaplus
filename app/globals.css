@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import 'swiper/css';
+
 :root {
   --primary-color: #98171B;
   --dark-color: #000000;
@@ -30,6 +31,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Existing fade animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -43,4 +45,47 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn .25s ease-out;
+}
+
+/* ---------------------------------------- */
+/* ⭐ NEW → MARQUEE SCROLL ANIMATION ADDED */
+/* ---------------------------------------- */
+
+@keyframes marqueeTrack {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.marquee-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.marquee-track {
+  display: flex;
+  white-space: nowrap;
+  animation: marqueeTrack 18s linear infinite;
+}
+
+/* Hide scrollbar (works on all browsers) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes spin-slow {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
 }

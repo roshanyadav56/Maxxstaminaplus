@@ -11,7 +11,7 @@ export default function Checkout() {
   const [discount, setDiscount] = useState(0);
   const [orderId, setOrderId] = useState("");
 
-  // NEW: coupon input
+  // coupon input
   const [couponInput, setCouponInput] = useState("");
 
   const [formValues, setFormValues] = useState({
@@ -31,18 +31,34 @@ export default function Checkout() {
 
   const [openMenu, setOpenMenu] = useState(null);
 
-  // NEW: selected address index
+  // selected address index
   const [selectedAddress, setSelectedAddress] = useState(null);
+
+  const [couponError, setCouponError] = useState(false);
+
+  // Payment method states
+  const [paymentTab, setPaymentTab] = useState("UPI"); // "UPI" | "CARD" | "NETBANK" | "COD"
+  const [upiId, setUpiId] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardMM, setCardMM] = useState("");
+  const [cardYY, setCardYY] = useState("");
+  const [cardCVV, setCardCVV] = useState("");
+  const [cardName, setCardName] = useState("");
+  const [selectedBank, setSelectedBank] = useState("");
+  const [paymentErrors, setPaymentErrors] = useState({});
+  const [paymentFormMessage, setPaymentFormMessage] = useState(""); // pretty grey bar message
+  const [paymentValid, setPaymentValid] = useState(false); // whether online payment form is valid
+
+  // order success image (uploaded file path)
+  const orderSuccessImage = "/mnt/data/0221919e-8963-430f-917b-576a8ed7a93f.png";
 
   // Load data on mount
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("userAddresses")) || [];
     setSavedAddresses(stored);
 
-    // If no addresses -> show form
     if (stored.length === 0) setShowForm(true);
 
-    // Load cart
     const loadCart = () => {
       try {
         const cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -54,7 +70,6 @@ export default function Checkout() {
 
     loadCart();
 
-    // BUY NOW logic (single product checkout)
     const singleProduct = JSON.parse(localStorage.getItem("checkoutProduct"));
     const fullCart = JSON.parse(localStorage.getItem("cart")) || [];
 
@@ -64,11 +79,9 @@ export default function Checkout() {
       setCartItems(fullCart);
     }
 
-    // Read applied coupon
     const savedCoupon = JSON.parse(localStorage.getItem("appliedCoupon"));
     setDiscount(savedCoupon?.discount || 0);
 
-    // Read selected address index if previously stored
     const savedIndexRaw = localStorage.getItem("selectedCheckoutAddressIndex");
     const savedIndex =
       savedIndexRaw !== null && !isNaN(Number(savedIndexRaw))
@@ -78,12 +91,10 @@ export default function Checkout() {
     if (savedIndex !== null && stored[savedIndex]) {
       setSelectedAddress(savedIndex);
     } else if (stored.length > 0) {
-      // default to first address if none saved
       setSelectedAddress(0);
       localStorage.setItem("selectedCheckoutAddressIndex", "0");
     }
 
-    // listen to storage changes
     window.addEventListener("localStorageUpdated", loadCart);
     window.addEventListener("storage", loadCart);
 
@@ -102,6 +113,17 @@ export default function Checkout() {
   const discountAmount = (subtotal * discount) / 100;
   const finalTotal = subtotal - discountAmount;
 
+  // online offer calculation (5% up to 100)
+  const calcOnlineOffer = (amount) => Math.min((amount * 5) / 100, 100);
+
+  // derive onlineOffer & onlinePayable based on current finalTotal and paymentValid + paymentTab
+  const onlineOfferAmount =
+    paymentTab !== "COD" && paymentValid ? calcOnlineOffer(finalTotal) : 0;
+  const onlinePayable =
+    paymentTab !== "COD" && paymentValid
+      ? Number((finalTotal - onlineOfferAmount).toFixed(2))
+      : Number(finalTotal.toFixed(2));
+
   const formatDate = (date) =>
     date.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -115,15 +137,22 @@ export default function Checkout() {
   const applyCheckoutCoupon = () => {
     const code = couponInput.trim().toUpperCase();
 
+    if (code === "") {
+      setCouponError(true);
+      return;
+    }
+
     if (code === "DISCOUNT10") {
       setDiscount(10);
+      setCouponError(false);
+
       localStorage.setItem(
         "appliedCoupon",
         JSON.stringify({ code: "DISCOUNT10", discount: 10 })
       );
     } else {
-      setDiscount(0);
-      localStorage.removeItem("appliedCoupon");
+      setCouponError(true);
+      return;
     }
   };
 
@@ -138,7 +167,8 @@ export default function Checkout() {
     const newAddr = {
       tag: formValues.tag || "HOME",
       name: `${formValues.firstName} ${formValues.lastName}`.trim(),
-      phone: formValues.phone,
+      phone: `${formValues.countryCode || "+91"} ${formValues.phone}`,
+      altPhone: formValues.altPhone ? `${formValues.altCountryCode || "+91"} ${formValues.altPhone}` : "",
       address: `${formValues.address}, ${formValues.city}, ${formValues.state}, ${formValues.country} - ${formValues.pincode}`,
     };
 
@@ -147,13 +177,9 @@ export default function Checkout() {
     setSavedAddresses(updated);
     setShowForm(false);
 
-    // select newly added address
     const newIndex = updated.length - 1;
     setSelectedAddress(newIndex);
-    localStorage.setItem(
-      "selectedCheckoutAddressIndex",
-      String(newIndex)
-    );
+    localStorage.setItem("selectedCheckoutAddressIndex", String(newIndex));
 
     setFormValues({
       firstName: "",
@@ -179,17 +205,14 @@ export default function Checkout() {
     localStorage.setItem("userAddresses", JSON.stringify(updated));
     setOpenMenu(null);
 
-    // adjust selectedAddress if needed
     if (selectedAddress === null) return;
 
     if (index === selectedAddress) {
-      // deleted the selected one
       if (updated.length === 0) {
         setSelectedAddress(null);
         localStorage.removeItem("selectedCheckoutAddressIndex");
         localStorage.removeItem("selectedCheckoutAddress");
       } else {
-        // choose nearest valid index (0)
         const newIndex = 0;
         setSelectedAddress(newIndex);
         localStorage.setItem("selectedCheckoutAddressIndex", String(newIndex));
@@ -199,7 +222,6 @@ export default function Checkout() {
         );
       }
     } else if (index < selectedAddress) {
-      // shift left by one
       const newIndex = selectedAddress - 1;
       setSelectedAddress(newIndex);
       localStorage.setItem("selectedCheckoutAddressIndex", String(newIndex));
@@ -259,8 +281,64 @@ export default function Checkout() {
     }
   };
 
+  // Validate payment fields before placing order
+  const validatePayment = () => {
+    const errors = {};
+    let message = "";
+    let valid = true;
+
+    if (paymentTab === "UPI") {
+      if (!upiId || upiId.trim().length < 3) {
+        errors.upiId = "Enter a valid UPI ID";
+        message = "Please Enter UPI id";
+        valid = false;
+      }
+    } else if (paymentTab === "CARD") {
+      const digits = cardNumber.replace(/\s+/g, "");
+      if (!digits || digits.length < 12) {
+        errors.cardNumber = "Enter valid card number";
+        message = "Please Enter Card Details";
+        valid = false;
+      }
+      if (!cardMM || !cardYY) {
+        errors.expiry = "Enter expiry month and year";
+        message = "Please Enter Card Details";
+        valid = false;
+      }
+      if (!cardCVV || cardCVV.length < 3) {
+        errors.cvv = "Enter valid CVV";
+        message = "Please Enter Card Details";
+        valid = false;
+      }
+      if (!cardName || cardName.trim().length < 2) {
+        errors.cardName = "Enter cardholder name";
+        message = "Please Enter Card Details";
+        valid = false;
+      }
+    } else if (paymentTab === "NETBANK") {
+      if (!selectedBank) {
+        errors.bank = "Select a bank";
+        message = "Select a bank to proceed";
+        valid = false;
+      }
+    }
+
+    setPaymentErrors(errors);
+    setPaymentFormMessage(valid ? "" : message);
+    setPaymentValid(valid);
+    return valid;
+  };
+
+  // helpers to clear inline messages when user types
+  const clearPaymentMessageOnInput = () => {
+    if (paymentFormMessage) setPaymentFormMessage("");
+    if (Object.keys(paymentErrors).length > 0) setPaymentErrors({});
+    if (paymentValid) setPaymentValid(false); // revalidate next time explicitly
+  };
+
   // PLACE ORDER
   const handlePlaceOrder = () => {
+    // address checks (retain your existing logic)
     if (savedAddresses.length > 0 && selectedAddress === null) {
       alert("Please select a delivery address!");
       return;
@@ -269,6 +347,20 @@ export default function Checkout() {
     if (savedAddresses.length === 0) {
       alert("Please add an address before placing the order.");
       return;
+    }
+
+    // payment validation for online methods
+    if (paymentTab !== "COD") {
+      const ok = validatePayment();
+      if (!ok) {
+        return;
+      } else {
+        setPaymentFormMessage("");
+      }
+    } else {
+      setPaymentFormMessage("");
+      setPaymentErrors({});
+      setPaymentValid(false);
     }
 
     const chosenAddress = savedAddresses[selectedAddress];
@@ -295,14 +387,40 @@ export default function Checkout() {
     const outForDeliveryDate = formatDate(new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000));
     const deliveredDate = formatDate(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000));
 
+    // compute final order summary values
+    const onlineOffer = paymentTab !== "COD" ? calcOnlineOffer(finalTotal) : 0;
+    const totalAfterOnlineOffer = paymentTab !== "COD" ? Number((finalTotal - onlineOffer).toFixed(2)) : Number(finalTotal.toFixed(2));
+
     const orderSummary = {
       price: Number(subtotal.toFixed(2)),
       discountPercent: discount,
       discount: Number(discountAmount.toFixed(2)),
+      onlineOffer: onlineOffer,
       delivery: 0,
       tax: 0,
-      total: Number(finalTotal.toFixed(2)),
+      total: Number(totalAfterOnlineOffer.toFixed(2)),
     };
+
+    // Payment details to store in payload
+    let paymentPayload = { method: "Cash on Delivery" };
+    if (paymentTab === "UPI") {
+      paymentPayload = { method: "UPI", upiId: upiId.trim() };
+    } else if (paymentTab === "CARD") {
+      const mask = (num) => {
+        const d = num.replace(/\s+/g, "");
+        if (d.length <= 4) return d;
+        return "**** **** **** " + d.slice(-4);
+      };
+      paymentPayload = {
+        method: "Card",
+        cardName: cardName,
+        cardMasked: mask(cardNumber),
+      };
+    } else if (paymentTab === "NETBANK") {
+      paymentPayload = { method: "Netbanking", bank: selectedBank };
+    } else if (paymentTab === "COD") {
+      paymentPayload = { method: "Cash on Delivery" };
+    }
 
     const orderPayload = {
       orderId: orderIdentifier,
@@ -323,9 +441,7 @@ export default function Checkout() {
         img: item.image,
       })),
       summary: orderSummary,
-      payment: {
-        method: "Cash on Delivery",
-      },
+      payment: paymentPayload,
       delivery: {
         address: chosenAddress?.address || "",
       },
@@ -375,7 +491,6 @@ export default function Checkout() {
                 key={i}
                 className={`relative border ${selectedAddress === i ? "ring-2 ring-[var(--primary-color)]" : "border-[#c9c9c9]"} rounded-xl p-5 mt-5 bg-[var(--light-color)] shadow-sm`}
               >
-                {/* SELECT ADDRESS RADIO BUTTON */}
                 <label className="absolute top-6 left-5">
                   <input
                     type="radio"
@@ -386,7 +501,6 @@ export default function Checkout() {
                   />
                 </label>
 
-                {/* Menu button */}
                 <button
                   onClick={() => toggleMenu(i)}
                   className="absolute top-4 right-4 text-[var(--dark-color)] text-xl"
@@ -394,7 +508,6 @@ export default function Checkout() {
                   ⋮
                 </button>
 
-                {/* Menu dropdown */}
                 {openMenu === i && (
                   <div className="absolute top-10 right-4 shadow-lg bg-[var(--light-color)] border rounded-lg w-32 z-10">
                     <button
@@ -425,7 +538,201 @@ export default function Checkout() {
               </div>
             ))}
 
-          {/* ADD ADDRESS FORM */}
+          {/* PAYMENT METHOD UI - LEFT SIDE, after addresses */}
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold text-[var(--dark-color)] mb-4">Choose Payment Method</h2>
+
+            <div className="flex gap-4 flex-wrap">
+              {/* UPI */}
+              <button
+                onClick={() => {
+                  setPaymentTab("UPI");
+                  setPaymentFormMessage("");
+                  setPaymentValid(false);
+                }}
+                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative ${paymentTab === "UPI" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white text-[var(--dark-color)]"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-[var(--dark-color)] font-medium">UPI</div>
+                  </div>
+                  {paymentTab === "UPI" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] text-[var(--dark-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
+                </div>
+              </button>
+
+              {/* Card */}
+              <button
+                onClick={() => {
+                  setPaymentTab("CARD");
+                  setPaymentFormMessage("");
+                  setPaymentValid(false);
+                }}
+                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "CARD" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Credit/Debit Card</div>
+                  </div>
+                  {paymentTab === "CARD" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
+                </div>
+              </button>
+
+              {/* Netbanking */}
+              <button
+                onClick={() => {
+                  setPaymentTab("NETBANK");
+                  setPaymentFormMessage("");
+                  setPaymentValid(false);
+                }}
+                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "NETBANK" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Netbanking</div>
+                  </div>
+                  {paymentTab === "NETBANK" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
+                </div>
+              </button>
+
+              {/* COD */}
+              <button
+                onClick={() => {
+                  setPaymentTab("COD");
+                  setPaymentFormMessage("");
+                  setPaymentValid(false);
+                }}
+                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "COD" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Cash On Delivery</div>
+                  </div>
+                  {paymentTab === "COD" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
+                </div>
+              </button>
+            </div>
+
+            {/* Selected payment form */}
+            <div className="mt-6">
+              {paymentTab === "UPI" && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--primary-color)] mb-2">Pay using UPI ID</label>
+                  <input
+                    value={upiId}
+                    onChange={(e) => {
+                      setUpiId(e.target.value);
+                      setPaymentErrors((p) => ({ ...p, upiId: null }));
+                      clearPaymentMessageOnInput();
+                    }}
+                    placeholder="Enter your UPI ID"
+                    className={`w-full border rounded-lg px-4 py-3 text-[var(--dark-color)] outline-none ${paymentErrors.upiId ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                  />
+                </div>
+              )}
+
+              {paymentTab === "CARD" && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--primary-color)] mb-2">Pay using Credit/Debit Card</label>
+
+                  <input
+                    value={cardNumber}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^\d\s]/g, "");
+                      setCardNumber(v);
+                      setPaymentErrors((p) => ({ ...p, cardNumber: null }));
+                      clearPaymentMessageOnInput();
+                    }}
+                    placeholder="Card Number"
+                    className={`w-full border text-[var(--dark-color)] rounded-lg px-4 py-3 mb-3 outline-none ${paymentErrors.cardNumber ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                  />
+
+                  <div className="flex gap-3 mb-3">
+                    <input
+                      value={cardMM}
+                      onChange={(e) => {
+                        setCardMM(e.target.value.replace(/[^\d]/g, "").slice(0, 2));
+                        clearPaymentMessageOnInput();
+                      }}
+                      placeholder="MM"
+                      className={`w-1/3 border text-[var(--dark-color)] rounded-lg px-4 py-3 outline-none ${paymentErrors.expiry ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                    />
+                    <input
+                      value={cardYY}
+                      onChange={(e) => {
+                        setCardYY(e.target.value.replace(/[^\d]/g, "").slice(0, 2));
+                        clearPaymentMessageOnInput();
+                      }}
+                      placeholder="YY"
+                      className={`w-1/3 border text-[var(--dark-color)] rounded-lg px-4 py-3 outline-none ${paymentErrors.expiry ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                    />
+                    <input
+                      value={cardCVV}
+                      onChange={(e) => {
+                        setCardCVV(e.target.value.replace(/[^\d]/g, "").slice(0, 4));
+                        clearPaymentMessageOnInput();
+                      }}
+                      placeholder="CVV"
+                      className={`w-1/3 border text-[var(--dark-color)] rounded-lg px-4 py-3 outline-none ${paymentErrors.cvv ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                    />
+                  </div>
+
+                  <input
+                    value={cardName}
+                    onChange={(e) => {
+                      setCardName(e.target.value);
+                      setPaymentErrors((p) => ({ ...p, cardName: null }));
+                      clearPaymentMessageOnInput();
+                    }}
+                    placeholder="Cardholder Name"
+                    className={`w-full border text-[var(--dark-color)] rounded-lg px-4 py-3 outline-none ${paymentErrors.cardName ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                  />
+                </div>
+              )}
+
+              {paymentTab === "NETBANK" && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--primary-color)] mb-2">Netbanking</label>
+                  <select
+                    value={selectedBank}
+                    onChange={(e) => {
+                      setSelectedBank(e.target.value);
+                      setPaymentErrors((p) => ({ ...p, bank: null }));
+                      clearPaymentMessageOnInput();
+                    }}
+                    className={`w-full border text-[var(--dark-color)] rounded-lg px-4 py-3 outline-none ${paymentErrors.bank ? "border-red-500" : "border-[var(--primary-color)]"}`}
+                  >
+                    <option value="">Select Bank</option>
+                    <option value="HDFC">HDFC Bank</option>
+                    <option value="SBI">State Bank of India</option>
+                    <option value="ICICI">ICICI Bank</option>
+                    <option value="AXIS">Axis Bank</option>
+                    <option value="Kotak">Kotak Mahindra Bank</option>
+                  </select>
+                </div>
+              )}
+
+              {paymentTab === "COD" && (
+                <div>
+                  <p className="text-sm text-[var(--text-muted)]">You will pay at the time of delivery.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Pretty inline error / informational grey bar (screenshot style) */}
+            {paymentFormMessage ? (
+              <div className="mt-6 bg-gray-400 rounded-lg py-4 text-center text-white font-semibold">
+                {paymentFormMessage}
+              </div>
+            ) : (
+              paymentTab !== "COD" && (
+                <p className="mt-6 text-center text-sm text-[#c96e4f]">
+                  Enjoy the extra 5% online payment discount
+                </p>
+              )
+            )}
+          </div>
+
+          {/* ADD ADDRESS FORM (unchanged) */}
           {showForm && (
             <>
               <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--light-color)] px-4 sm:px-8 py-4 border border-[var(--bg-muted)] border-b-0 rounded-t-2xl shadow-sm gap-3 sm:gap-0">
@@ -478,13 +785,34 @@ export default function Checkout() {
                   <label className="text-sm font-semibold text-[var(--primary-color)] mb-2">
                     Mobile Number
                   </label>
-                  <input
-                    name="phone"
-                    value={formValues.phone}
-                    onChange={handleChange}
-                    required
-                    className="border-b text-[var(--dark-color)] border-[var(--dark-color)] pb-1 outline-none text-sm w-full"
-                  />
+
+                  <div className="flex gap-2 items-center">
+                    <select
+                      name="countryCode"
+                      defaultValue="+91"
+                      className="border-b border-[var(--dark-color)] bg-transparent text-[var(--dark-color)] pb-1 outline-none text-sm w-20"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+81">🇯🇵 +81</option>
+                    </select>
+
+                    <input
+                      name="phone"
+                      value={formValues.phone}
+                      maxLength="10"
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+                        setFormValues((prev) => ({ ...prev, phone: value }));
+                      }}
+                      required
+                      className="flex-1 border-b text-[var(--dark-color)] border-[var(--dark-color)] pb-1 outline-none text-sm"
+                      placeholder="Enter 10 digit number"
+                    />
+                  </div>
                 </div>
 
                 {/* ALT NUMBER */}
@@ -492,12 +820,33 @@ export default function Checkout() {
                   <label className="text-sm font-semibold text-[var(--primary-color)] mb-2">
                     Alternate Mobile Number (Optional)
                   </label>
-                  <input
-                    name="altPhone"
-                    value={formValues.altPhone}
-                    onChange={handleChange}
-                    className="border-b text-[var(--dark-color)] border-[var(--dark-color)] pb-1 outline-none text-sm w-full"
-                  />
+
+                  <div className="flex gap-2 items-center">
+                    <select
+                      name="altCountryCode"
+                      defaultValue="+91"
+                      className="border-b border-[var(--dark-color)] bg-transparent text-[var(--dark-color)] pb-1 outline-none text-sm w-20"
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+81">🇯🇵 +81</option>
+                    </select>
+
+                    <input
+                      name="altPhone"
+                      value={formValues.altPhone}
+                      maxLength="10"
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+                        setFormValues((prev) => ({ ...prev, altPhone: value }));
+                      }}
+                      className="flex-1 border-b text-[var(--dark-color)] border-[var(--dark-color)] pb-1 outline-none text-sm"
+                      placeholder="Optional"
+                    />
+                  </div>
                 </div>
 
                 {/* CITY */}
@@ -633,7 +982,7 @@ export default function Checkout() {
                   <b className="text-sm">₹{subtotal.toFixed(2)}</b>
                 </div>
 
-                {/* Discount */}
+                {/* Discount (coupon) */}
                 {discount > 0 && (
                   <div className="flex justify-between border-b border-[var(--bg-muted)] pb-2">
                     <span className="text-sm font-medium">
@@ -642,6 +991,14 @@ export default function Checkout() {
                     <b className="text-sm text-green-600">
                       -₹{discountAmount.toFixed(2)}
                     </b>
+                  </div>
+                )}
+
+                {/* Online Payment Offer (only show when online method chosen & payment valid) */}
+                {paymentTab !== "COD" && paymentValid && (
+                  <div className="flex justify-between border-b text-[var(--dark-color)] border-[var(--bg-muted)] pb-2">
+                    <span className="text-sm font-medium">Online Payment Offer (5% upto ₹100):</span>
+                    <b className="text-sm text-green-600">-₹{onlineOfferAmount.toFixed(2)}</b>
                   </div>
                 )}
 
@@ -654,7 +1011,7 @@ export default function Checkout() {
                 {/* Total */}
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
-                  <span>₹{finalTotal.toFixed(2)}</span>
+                  <span>₹{(paymentTab !== "COD" && paymentValid ? onlinePayable : finalTotal).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -662,24 +1019,62 @@ export default function Checkout() {
               <div className="mt-6 w-full flex">
                 <input
                   value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value)}
-                  className="flex-grow border border-[var(--primary-color)] text-[var(--dark-color)] px-4 py-3 rounded-l-xl outline-none text-sm h-12"
+                  onChange={(e) => {
+                    setCouponInput(e.target.value);
+                    setCouponError(false);
+                  }}
+                  className={`flex-grow border ${couponError ? "border-red-500" : "border-[var(--primary-color)]"
+                    } text-[var(--dark-color)] px-4 py-3 rounded-l-xl outline-none text-sm h-12`}
                   placeholder="Coupon Code"
                 />
 
                 <button
                   onClick={applyCheckoutCoupon}
-                  className="bg-[var(--primary-color)] text-[var(--light-color)] px-6 rounded-r-xl font-medium hover:opacity-95 transition h-12 text-sm flex items-center"
+                  disabled={couponError || couponInput.trim() === ""}
+                  className={`px-6 h-12 rounded-r-xl font-medium flex items-center
+      ${discount > 0
+                      ? "bg-[var(--primary-color)] text-[var(--light-color)]"
+                      : "bg-[var(--primary-color)] text-[var(--light-color)]"
+                    }
+      ${couponError || couponInput.trim() === ""
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer hover:opacity-95"
+                    }
+    `}
                 >
-                  Apply Coupon
+                  {discount > 0 ? "Change" : "Apply"}
                 </button>
               </div>
 
+              {couponError && (
+                <p className="text-red-500 text-sm mt-2">
+                  Invalid coupon code. Try again.
+                </p>
+              )}
+
+              {/* Small orange strip above CTA */}
+              <p className="text-center mt-4 text-sm text-[#c96e4f]">Pay online to get extra 5% upto Rs. 100</p>
+
+              {/* CTA */}
               <button
                 onClick={handlePlaceOrder}
-                className="w-full bg-[var(--primary-color)] text-[var(--light-color)] text-lg font-semibold py-4 rounded-xl mt-6 hover:opacity-95"
+                disabled={paymentTab !== "COD" && !paymentValid}
+                className={`w-full mt-4 rounded-xl text-white text-lg font-semibold py-4 ${paymentTab === "COD" ? "bg-[var(--primary-color)]" : "bg-[var(--primary-color)]"} ${paymentTab !== "COD" && !paymentValid ? "opacity-60 cursor-not-allowed" : "hover:opacity-95"}`}
               >
-                Place Order
+                {paymentTab === "COD" ? (
+                  <>
+                    PLACE ORDER : ₹{finalTotal.toFixed(2)}{" "}
+                    {discount > 0 && <span className="line-through text-sm text-white/60 ml-3">₹{subtotal.toFixed(2)}</span>}
+                  </>
+                ) : paymentValid ? (
+                  <>
+                    PAY &amp; PLACE ORDER : ₹{onlinePayable.toFixed(2)}{" "}
+                    {discount > 0 && <span className="line-through text-sm text-white/60 ml-3">₹{subtotal.toFixed(2)}</span>}
+                  </>
+                ) : (
+                  // disabled state text (matches screenshot style)
+                  <>Please complete payment details</>
+                )}
               </button>
             </>
           )}
@@ -722,7 +1117,7 @@ export default function Checkout() {
             </div>
 
             <img
-              src="\assets\Images\order-success.png"
+              src="/assets/Images/order-success.png"
               className="w-72 mx-auto mt-6"
               alt="Success"
             />

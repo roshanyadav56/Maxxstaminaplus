@@ -59,8 +59,8 @@ export default function TestimonialSlider() {
   return (
     <section className="py-12">
       <div className="max-w-7xl mx-auto">
-        <div className="rounded-2xl shadow-sm p-8 md:p-10 relative overflow-hidden bg-[var(--light-color)]">
-          <h2 className="text-3xl font-bold text-[var(--primary-color)] mb-8">
+        <div className="rounded-2xl shadow-sm p-6 md:p-10 relative overflow-hidden bg-[var(--light-color)]">
+          <h2 className=" text-lg sm:text-3xl font-bold text-[var(--primary-color)] mb-4">
             OUR HAPPY CUSTOMERS
           </h2>
 

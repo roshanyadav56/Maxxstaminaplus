@@ -3,7 +3,7 @@ import { FaShieldAlt, FaStar, FaTruck, FaBox } from 'react-icons/fa'; // Import 
 
 const FeatureSection = () => {
     return (
-        <div className="w-full py-8">
+        <div className="w-full py-2 sm:py-8">
             <div className="max-w-7xl mx-3 md:mx-auto p-4 sm:px-6 lg:px-8 bg-[var(--light-color)] rounded-xl shadow-sm relative">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                     {/* Feature Item 1 */}
