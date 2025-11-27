@@ -44,7 +44,7 @@ const CategorySlider = () => {
 
   return (
     <div className="w-full py-2 sm:py-6">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+      <div className="max-w-6xl mx-auto sm:px-6 lg:px-8 flex items-center">
 
         {/* LEFT ARROW — hide on mobile */}
         <button
@@ -57,14 +57,14 @@ const CategorySlider = () => {
         {/* SLIDER */}
         <div
           ref={trackRef}
-          className="overflow-x-auto no-scrollbar w-full mx-2 sm:mx-4"
+          className="overflow-x-auto no-scrollbar w-full sm:mx-4"
           style={{
             scrollBehavior: "smooth",
             WebkitOverflowScrolling: "touch",
             scrollSnapType: "x mandatory",
           }}
         >
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             {categories.map((item, i) => (
               <div
                 key={i}

@@ -1,5 +1,6 @@
 "use client";
-
+import { FaRegCreditCard, FaUniversity, FaTruck, } from "react-icons/fa";
+import { PiQrCode } from "react-icons/pi";
 import { useEffect, useState } from "react";
 import { FaLocationCrosshairs } from "react-icons/fa6";
 import { MdAdd, MdDelete } from "react-icons/md";
@@ -542,75 +543,107 @@ export default function Checkout() {
           <div className="mt-6">
             <h2 className="text-xl font-semibold text-[var(--dark-color)] mb-4">Choose Payment Method</h2>
 
-            <div className="flex gap-4 flex-wrap">
-              {/* UPI */}
+            {/* ✅ NEW PAYMENT TABS UI (React Icons) */}
+            <div className="flex gap-4 flex-wrap justify-center">
+
+              {/* ✅ UPI */}
               <button
                 onClick={() => {
                   setPaymentTab("UPI");
                   setPaymentFormMessage("");
                   setPaymentValid(false);
                 }}
-                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative ${paymentTab === "UPI" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white text-[var(--dark-color)]"}`}
+                className={`w-32 h-32 p-4 border rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative
+      ${paymentTab === "UPI"
+                    ? "border-[var(--primary-color)]"
+                    : "border-gray-300 bg-white"
+                  }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--dark-color)] font-medium">UPI</div>
+                {paymentTab === "UPI" && (
+                  <div className="absolute top-1 right-1 bg-[var(--primary-color)] text-white text-[10px] px-1 rounded-sm">
+                    ✓
                   </div>
-                  {paymentTab === "UPI" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] text-[var(--dark-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
-                </div>
+                )}
+
+                {/* ✅ Main UPI Icon */}
+                <PiQrCode size={26} className="text-[var(--text-muted)]" />
+
+                <span className="text-sm font-medium mt-2 text-[var(--text-muted)]">UPI</span>
+
               </button>
 
-              {/* Card */}
+              {/* ✅ CARD */}
               <button
                 onClick={() => {
                   setPaymentTab("CARD");
                   setPaymentFormMessage("");
                   setPaymentValid(false);
                 }}
-                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "CARD" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+                className={`w-32 h-32 p-4 border rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative
+      ${paymentTab === "CARD"
+                    ? "border-[var(--primary-color)] bg-green-50"
+                    : "border-gray-300 bg-white"
+                  }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Credit/Debit Card</div>
+                {paymentTab === "CARD" && (
+                  <div className="absolute top-1 right-1 bg-[var(--primary-color)] text-white text-[10px] px-1 rounded-sm">
+                    ✓
                   </div>
-                  {paymentTab === "CARD" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
-                </div>
+                )}
+
+                <FaRegCreditCard size={26} className="text-[var(--text-muted)]" />
+                <span className="text-sm font-medium mt-2 text-[var(--text-muted)]">Credit/Debit Card</span>
               </button>
 
-              {/* Netbanking */}
+              {/* ✅ Netbanking */}
               <button
                 onClick={() => {
                   setPaymentTab("NETBANK");
                   setPaymentFormMessage("");
                   setPaymentValid(false);
                 }}
-                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "NETBANK" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+                className={`w-32 h-32 p-4 border rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative
+      ${paymentTab === "NETBANK"
+                    ? "border-[var(--primary-color)] bg-green-50"
+                    : "border-gray-300 bg-white"
+                  }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Netbanking</div>
+                {paymentTab === "NETBANK" && (
+                  <div className="absolute top-1 right-1 bg-[var(--primary-color)] text-white text-[10px] px-1 rounded-sm">
+                    ✓
                   </div>
-                  {paymentTab === "NETBANK" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
-                </div>
+                )}
+
+                <FaUniversity size={26} className="text-[var(--text-muted)]" />
+                <span className="text-sm font-medium mt-2 text-[var(--text-muted)]">Netbanking</span>
               </button>
 
-              {/* COD */}
+              {/* ✅ COD */}
               <button
                 onClick={() => {
                   setPaymentTab("COD");
                   setPaymentFormMessage("");
                   setPaymentValid(false);
                 }}
-                className={`flex-1 min-w-[140px] px-4 py-4 border rounded-lg text-left relative text-[var(--dark-color)] ${paymentTab === "COD" ? "ring-2 ring-[var(--primary-color)] bg-[var(--light-color)]" : "border-[var(--bg-muted)] bg-white"}`}
+                className={`w-32 h-32 p-4 border rounded-xl flex flex-col items-center justify-center cursor-pointer transition relative
+      ${paymentTab === "COD"
+                    ? "border-[var(--primary-color)] bg-green-50"
+                    : "border-gray-300 bg-white"
+                  }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Cash On Delivery</div>
+                {paymentTab === "COD" && (
+                  <div className="absolute top-1 right-1 bg-[var(--primary-color)] text-white text-[10px] px-1 rounded-sm">
+                    ✓
                   </div>
-                  {paymentTab === "COD" && <div className="absolute -top-2 -right-2 bg-[var(--primary-color)] rounded-sm text-white px-2 py-0.5 text-sm">✓</div>}
-                </div>
+                )}
+
+                <FaTruck size={26} className="text-[var(--text-muted)]" />
+                <span className="text-sm font-medium mt-2 text-[var(--text-muted)] text-center">Cash On Delivery</span>
               </button>
+
             </div>
+
+
 
             {/* Selected payment form */}
             <div className="mt-6">
@@ -988,7 +1021,7 @@ export default function Checkout() {
                     <span className="text-sm font-medium">
                       Discount ({discount}%):
                     </span>
-                    <b className="text-sm text-green-600">
+                    <b className="text-sm text-[var(--primary-color)]">
                       -₹{discountAmount.toFixed(2)}
                     </b>
                   </div>
@@ -998,7 +1031,7 @@ export default function Checkout() {
                 {paymentTab !== "COD" && paymentValid && (
                   <div className="flex justify-between border-b text-[var(--dark-color)] border-[var(--bg-muted)] pb-2">
                     <span className="text-sm font-medium">Online Payment Offer (5% upto ₹100):</span>
-                    <b className="text-sm text-green-600">-₹{onlineOfferAmount.toFixed(2)}</b>
+                    <b className="text-sm text-[var(--primary-color)]">-₹{onlineOfferAmount.toFixed(2)}</b>
                   </div>
                 )}
 

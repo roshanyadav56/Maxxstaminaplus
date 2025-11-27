@@ -121,6 +121,15 @@ export default function ProductDetails({ params }) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const [isInCart, setIsInCart] = useState(false);
+
+  useEffect(() => {
+    if (!product) return;
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const exists = cart.some((p) => p.id === product.id);
+    setIsInCart(exists);
+  }, [product]);
+
   // Mock images for carousel (same image repeated for demo; replace with actual images)
   const productImages = product?.images ?? [];
 
@@ -154,23 +163,37 @@ export default function ProductDetails({ params }) {
 
   const addToCart = () => {
     if (!product) return;
+
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    // Check if already in cart, add quantity
     const existing = cart.find((p) => p.id === product.id);
+
     if (existing) {
-      existing.qty = (existing.qty || 1) + quantity;
-    } else {
-      cart.push({ ...product, qty: quantity });
+      setIsInCart(true);
+      router.push("/cart");
+      return;
     }
 
-    localStorage.setItem("cart", JSON.stringify(cart));
+    cart.push({
+      id: product.id,
+      name: product.name,
+      currentPrice: product.currentPrice,
+      oldPrice: product.oldPrice,
+      discountPercent: product.discountPercent,
+      description: product.description,
+      qty: quantity,
+      image: product.images[0],     // ⭐ FINAL FIX
+    });
 
-    // Dispatch localStorage update event (keep it if other components rely on it)
+    localStorage.setItem("cart", JSON.stringify(cart));
+    setIsInCart(true);
+
     try {
       window.dispatchEvent(new Event("localStorageUpdated"));
     } catch (e) { }
   };
+
+
 
 
   if (!product) {
@@ -196,10 +219,19 @@ export default function ProductDetails({ params }) {
   const buyNow = () => {
     if (!product) return;
 
-    // CLEAR old buy-now product first
+    // Check Login
+    const loggedInUser = localStorage.getItem("loggedInUser");
+    if (!loggedInUser) {
+      // Save target product for after login
+      localStorage.setItem("redirectAfterLogin", `/product/${product.id}`);
+      alert("Please login to continue checkout");
+      router.push("/login");
+      return;
+    }
+
+    // If logged in → continue Buy Now
     localStorage.removeItem("checkoutProduct");
 
-    // SAVE only this product
     localStorage.setItem(
       "checkoutProduct",
       JSON.stringify({
@@ -213,6 +245,11 @@ export default function ProductDetails({ params }) {
 
     router.push("/checkout");
   };
+
+  // total prices
+  const totalPrice = product.currentPrice * quantity;
+  const totalOldPrice = product.oldPrice * quantity;
+
 
   // ------------------------------
   // ZOOM HANDLER (throttled via requestAnimationFrame)
@@ -247,13 +284,6 @@ export default function ProductDetails({ params }) {
   return (
     <>
       <div className="max-w-7xl mx-auto px-8 py-10 bg-[var(--light-color)] rounded-2xl mt-10">
-
-        {/* Breadcrumb */}
-        <p className="text-sm text-[var(--dark-color)] mb-6">
-          <Link href="/" className="hover:text-[var(--primary-color)]">Home</Link> /
-          <Link href="/products" className="ml-1 hover:text-[var(--primary-color)]">Products</Link> /
-          <span className="ml-1 text-[var(--primary-color)]">{product.name}</span>
-        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
 
@@ -431,8 +461,6 @@ export default function ProductDetails({ params }) {
 
           {/* RIGHT: Product Info */}
           <div className="sticky top-24 h-fit">
-            {/* Brand */}
-            <p className="text-xs text-[var(--dark-color)] uppercase tracking-wide mb-2">MaxxstaminaPlus</p>
 
             {/* Title */}
             <h1 className="text-2xl md:text-3xl font-bold text-[var(--dark-color)] mb-4">
@@ -441,10 +469,19 @@ export default function ProductDetails({ params }) {
 
             {/* Price Section */}
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-sm md:text-2xl line-through text-[var(--dark-color)]">₹{product.oldPrice}.00</span>
-              <span className="text-lg md:text-3xl font-bold text-[var(--primary-color)]">₹{product.currentPrice}.00</span>
-              <span className="text-sm md:text-2xl text-[var(--dark-color)] font-semibold">({product.discountPercent}% OFF)</span>
+              <span className="text-sm md:text-2xl line-through text-[var(--dark-color)]">
+                ₹{totalOldPrice}.00
+              </span>
+
+              <span className="text-lg md:text-3xl font-bold text-[var(--primary-color)]">
+                ₹{totalPrice}.00
+              </span>
+
+              <span className="text-sm md:text-2xl text-[var(--dark-color)] font-semibold">
+                ({product.discountPercent}% OFF)
+              </span>
             </div>
+
 
             <p className="text-xs text-[var(--dark-color)] mb-6">MRP (incl. all taxes)</p>
 
@@ -461,11 +498,18 @@ export default function ProductDetails({ params }) {
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <button
-                onClick={addToCart}
+                onClick={() => {
+                  if (isInCart) {
+                    router.push("/cart");
+                  } else {
+                    addToCart();
+                  }
+                }}
                 className="flex-1 px-6 py-3 bg-[var(--primary-color)] text-[var(--light-color)] rounded-lg font-bold text-base hover:opacity-95 transition"
               >
-                Add To Cart
+                {isInCart ? "Go To Cart" : "Add To Cart"}
               </button>
+
               <button
                 onClick={buyNow}
                 className="flex-1 px-6 py-3 border-2 border-[var(--primary-color)] text-[var(--primary-color)] rounded-lg font-bold text-base hover:bg-[var(--primary-color)] hover:text-[var(--light-color)] transition"

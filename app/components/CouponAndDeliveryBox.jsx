@@ -116,7 +116,7 @@ export default function CouponAndDeliveryBox() {
           Check Delivery Date
         </h2>
 
-        <div className="flex border rounded-xl overflow-hidden w-full max-w-md bg-[var(--light-color)]">
+        <div className="flex border rounded-xl overflow-hidden w-full max-w-md border-[var(--primary-color)] bg-[var(--light-color)]">
           <span className="flex items-center px-3 text-[var(--primary-color)]">
             <FaMapMarkerAlt />
           </span>

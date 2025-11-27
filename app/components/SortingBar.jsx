@@ -2,7 +2,7 @@
 
 export default function SortingBar({ sortBy, setSortBy }) {
   return (
-    <div className="w-full mb-10 rounded-xl flex justify-between items-center">
+    <div className="w-full mb-2 sm:mb-8 rounded-xl flex justify-between items-center">
       <h2 className="text-xl sm:text-2xl font-bold text-[var(--dark-color)]">
         Grab the Best Deal on{" "}
         <span className="text-[var(--primary-color)]">Maxx Stamina Plus+</span>

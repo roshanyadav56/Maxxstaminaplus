@@ -24,7 +24,12 @@ export default function OrderTrackingPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
-  const fallbackImg = "/mnt/data/b88ced91-51ab-4ff8-8a99-cfce618d4a23.png";
+  // ✅ NEW STATES FOR POPUP
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [otherReason, setOtherReason] = useState("");
+
+  const fallbackImg = "/assets/Images/fallback-product.png";
 
   useEffect(() => {
     const loadOrder = () => {
@@ -50,13 +55,21 @@ export default function OrderTrackingPage({ params }) {
   }, [id]);
 
   if (loading)
-    return <div className="p-20 text-center text-lg font-semibold text-[var(--dark-color)]">Loading…</div>;
+    return (
+      <div className="p-20 text-center text-lg font-semibold text-[var(--dark-color)]">
+        Loading…
+      </div>
+    );
 
   if (!order)
     return (
       <div className="p-20 text-center">
-        <h2 className="text-2xl font-bold text-[var(--dark-color)]">Order not found</h2>
-        <p className="text-[var(--text-muted)] mt-2">Check your Order ID or go back to My Orders.</p>
+        <h2 className="text-2xl font-bold text-[var(--dark-color)]">
+          Order not found
+        </h2>
+        <p className="text-[var(--text-muted)] mt-2">
+          Check your Order ID or go back to My Orders.
+        </p>
         <div className="mt-4">
           <Link href="/account" className="text-[var(--primary-color)] font-medium">
             Back to My Account
@@ -69,7 +82,6 @@ export default function OrderTrackingPage({ params }) {
     items = [],
     summary = {},
     timeline = {},
-    timelineDetails = {},
     delivery = {},
     payment = {},
     status = "confirmed",
@@ -77,16 +89,19 @@ export default function OrderTrackingPage({ params }) {
 
   const statusIndex = TIMELINE_STEPS.findIndex((s) => s.key === status);
 
-  const formatAmount = (v) =>
-    Number(v === undefined || v === null ? 0 : v).toFixed(2);
-
   const isCancelled = status === "cancelled";
   const isDelivered = status === "delivered";
 
-  const cancelOrder = () => {
-    if (!confirm("Are you sure you want to cancel this order?")) return;
+  // ✅ SUBMIT CANCEL WITH REASON
+  const handleCancelSubmit = () => {
+    const finalReason = cancelReason === "Other" ? otherReason : cancelReason;
 
-    const updated = { ...order, status: "cancelled" };
+    const updated = {
+      ...order,
+      status: "cancelled",
+      cancellationReason: finalReason,
+      refundStatus: payment?.method !== "Cash on Delivery" ? "Pending" : null,
+    };
 
     try {
       const history = JSON.parse(localStorage.getItem("orderHistory") || "[]");
@@ -98,7 +113,17 @@ export default function OrderTrackingPage({ params }) {
     } catch (e) { }
 
     setOrder(updated);
+    setShowCancelPopup(false);
+
+    // ✅ Redirect ONLY if Online Payment
+    if (payment?.method !== "Cash on Delivery") {
+      window.location.href = `/refund?orderId=${order.orderId}`;
+    }
   };
+
+
+  const formatAmount = (v) =>
+    Number(v === undefined || v === null ? 0 : v).toFixed(2);
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-10 text-[var(--dark-color)]">
@@ -113,7 +138,9 @@ export default function OrderTrackingPage({ params }) {
               <div>
                 <p className="text-sm text-[var(--text-muted)]">
                   Order ID:{" "}
-                  <span className="text-[var(--primary-color)] font-semibold">{order.orderId}</span>
+                  <span className="text-[var(--primary-color)] font-semibold">
+                    {order.orderId}
+                  </span>
                 </p>
 
                 <h1 className="text-2xl font-bold mt-1 text-[var(--dark-color)]">
@@ -135,10 +162,10 @@ export default function OrderTrackingPage({ params }) {
               </div>
             </div>
 
-            {/* CANCEL ORDER BUTTON */}
+            {/* ✅ CANCEL BUTTON */}
             {!isCancelled && !isDelivered && (
               <button
-                onClick={cancelOrder}
+                onClick={() => setShowCancelPopup(true)}
                 className="mt-4 px-5 py-2 rounded-lg font-medium transition
                            bg-[var(--primary-color)] text-[var(--light-color)]
                            hover:bg-[var(--dark-color)]"
@@ -147,40 +174,54 @@ export default function OrderTrackingPage({ params }) {
               </button>
             )}
 
-            {/* CANCELLED BANNER */}
-            {isCancelled ? (
+            {/* ✅ CANCELLED BANNER */}
+            {isCancelled && (
               <div className="mt-6 border-t pt-6">
                 <div className="rounded-lg p-4 border 
                                 bg-[var(--bg-muted)]/40 
                                 border-[var(--primary-color)]/40">
-                  <p className="font-semibold text-[var(--primary-color)]">Order Cancelled</p>
+                  <p className="font-semibold text-[var(--primary-color)]">
+                    Order Cancelled
+                  </p>
                   <p className="text-sm text-[var(--dark-color)]/70 mt-1">
                     This order was cancelled.
                   </p>
+
+                  {order.cancellationReason && (
+                    <p className="text-sm text-[var(--text-muted)] mt-1">
+                      Reason: {order.cancellationReason}
+                    </p>
+                  )}
                 </div>
               </div>
-            ) : (
-              /* TIMELINE */
+            )}
+            {order.refundStatus && (
+              <p className="text-sm text-green-600 font-medium mt-2">
+                Refund Status: {order.refundStatus}
+              </p>
+            )}
+
+
+            {/* ✅ TIMELINE SECTION (unchanged) */}
+            {!isCancelled && (
               <div className="mt-6">
+                {/* short view */}
                 {!showAll && (
                   <div className="flex items-start gap-6">
                     <div className="flex flex-col items-center">
-                      {/* FIRST DOT */}
                       <div
                         className={`w-5 h-5 rounded-full ${statusIndex >= 0
-                            ? "bg-[var(--success-color)]"
-                            : "bg-[var(--bg-muted)]"
+                          ? "bg-[var(--success-color)]"
+                          : "bg-[var(--bg-muted)]"
                           }`}
                       ></div>
 
-                      {/* CONNECTOR */}
                       <div className="w-1 h-10 bg-[var(--success-color)]/40 my-2" />
 
-                      {/* LAST DOT */}
                       <div
                         className={`w-5 h-5 rounded-full ${statusIndex >= 3
-                            ? "bg-[var(--success-color)]"
-                            : "bg-[var(--bg-muted)]"
+                          ? "bg-[var(--success-color)]"
+                          : "bg-[var(--bg-muted)]"
                           }`}
                       ></div>
                     </div>
@@ -199,75 +240,6 @@ export default function OrderTrackingPage({ params }) {
                   </div>
                 )}
 
-                {/* FULL TIMELINE */}
-                {showAll && (
-                  <div className="mt-4 border-t pt-6">
-                    {TIMELINE_STEPS.map((step, i) => {
-                      const msgs = timelineDetails?.[step.key] || [];
-                      const completed = i <= statusIndex;
-
-                      return (
-                        <div key={step.key} className="flex gap-6">
-                          <div className="flex flex-col items-center">
-
-                            {/* DOT */}
-                            <div
-                              className={`w-4 h-4 rounded-full ${completed
-                                  ? "bg-[var(--success-color)]"
-                                  : "bg-[var(--bg-muted)]"
-                                }`}
-                            />
-
-                            {/* CONNECTOR */}
-                            {i < TIMELINE_STEPS.length - 1 && (
-                              <div
-                                className={`w-1 flex-1 ${i < statusIndex
-                                    ? "bg-[var(--success-color)]/50"
-                                    : "bg-[var(--bg-muted)]"
-                                  }`}
-                              />
-                            )}
-                          </div>
-
-                          {/* LABEL + MESSAGES */}
-                          <div className="pb-8">
-                            <div className="flex items-baseline gap-3">
-                              <p className="font-semibold text-lg text-[var(--dark-color)]">
-                                {step.label}
-                              </p>
-
-                              <p className="text-sm text-[var(--text-muted)]">
-                                {timeline[step.key] || ""}
-                              </p>
-
-                              {completed && (
-                                <span className="ml-2 text-sm text-[var(--success-color)] font-medium">
-                                  Completed
-                                </span>
-                              )}
-                            </div>
-
-                            {msgs.length === 0 ? (
-                              <p className="text-sm text-[var(--text-muted)] mt-2">
-                                No updates available.
-                              </p>
-                            ) : (
-                              msgs.map((m, idx) => (
-                                <div key={idx} className="mt-3">
-                                  <p className="text-sm text-[var(--dark-color)]">{m.msg}</p>
-                                  {m.time && (
-                                    <p className="text-xs text-[var(--text-muted)]">{m.time}</p>
-                                  )}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
                 <div className="mt-4">
                   <button
                     onClick={() => setShowAll((s) => !s)}
@@ -282,7 +254,9 @@ export default function OrderTrackingPage({ params }) {
 
           {/* OTHER ITEMS */}
           <div className="bg-[var(--light-color)] shadow rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-[var(--dark-color)]">Other Items In This Order</h3>
+            <h3 className="text-lg font-semibold text-[var(--dark-color)]">
+              Other Items In This Order
+            </h3>
 
             <div className="mt-4 space-y-4">
               {items.map((item) => (
@@ -301,13 +275,16 @@ export default function OrderTrackingPage({ params }) {
                     </div>
 
                     <div>
-                      <p className="font-semibold text-[var(--dark-color)]">{item.title}</p>
+                      <p className="font-semibold text-[var(--dark-color)]">
+                        {item.title}
+                      </p>
+
                       <p
-                        className={`text-xs mt-1 ${isDelivered
+                        className={`text-xs mt-1 ${isCancelled
+                          ? "text-[var(--primary-color)]"
+                          : isDelivered
                             ? "text-[var(--success-color)]"
-                            : isCancelled
-                              ? "text-[var(--primary-color)]"
-                              : "text-[var(--primary-color)]"
+                            : "text-[var(--primary-color)]"
                           }`}
                       >
                         {isCancelled
@@ -316,6 +293,7 @@ export default function OrderTrackingPage({ params }) {
                             ? "Delivered"
                             : status}
                       </p>
+
                       <p className="text-xs text-[var(--text-muted)] mt-1">
                         Qty: {item.qty || 1}
                       </p>
@@ -323,7 +301,9 @@ export default function OrderTrackingPage({ params }) {
                   </div>
 
                   <div className="text-right">
-                    <p className="font-semibold text-[var(--dark-color)]">₹{formatAmount(item.price)}</p>
+                    <p className="font-semibold text-[var(--dark-color)]">
+                      ₹{formatAmount(item.price)}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -336,14 +316,17 @@ export default function OrderTrackingPage({ params }) {
 
           {/* DELIVERY DETAILS */}
           <div className="bg-[var(--light-color)] shadow rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-[var(--dark-color)]">Delivery details</h3>
+            <h3 className="text-lg font-semibold mb-4 text-[var(--dark-color)]">
+              Delivery details
+            </h3>
 
             <div className="space-y-4">
-
               <div className="flex items-start gap-3">
                 <AiOutlineHome size={22} className="text-[var(--dark-color)]/80 mt-1" />
                 <div>
-                  <p className="font-medium text-[var(--dark-color)]">Home</p>
+                  <p className="font-medium text-[var(--dark-color)]">
+                    Home
+                  </p>
                   <p className="text-sm text-[var(--text-muted)] leading-relaxed">
                     {delivery?.address}
                   </p>
@@ -353,7 +336,9 @@ export default function OrderTrackingPage({ params }) {
               <div className="flex items-start gap-3">
                 <AiOutlineUser size={22} className="text-[var(--dark-color)]/80 mt-1" />
                 <div>
-                  <p className="font-medium text-[var(--dark-color)]">{delivery?.name || "Customer"}</p>
+                  <p className="font-medium text-[var(--dark-color)]">
+                    {delivery?.name || "Customer"}
+                  </p>
                   <p className="text-sm text-[var(--text-muted)]">
                     {delivery?.phone || "—"}
                   </p>
@@ -364,10 +349,11 @@ export default function OrderTrackingPage({ params }) {
 
           {/* PRICE DETAILS */}
           <div className="bg-[var(--light-color)] shadow rounded-xl p-6">
-            <h3 className="text-xl font-bold mb-4 text-[var(--dark-color)]">Price details</h3>
+            <h3 className="text-xl font-bold mb-4 text-[var(--dark-color)]">
+              Price details
+            </h3>
 
             <div className="space-y-4 text-sm">
-
               <div className="flex justify-between">
                 <span className="text-[var(--dark-color)]">Listing price</span>
                 <span className="line-through text-[var(--text-muted)]">
@@ -377,7 +363,9 @@ export default function OrderTrackingPage({ params }) {
 
               <div className="flex justify-between">
                 <span className="text-[var(--dark-color)]">Special price</span>
-                <span className="text-[var(--dark-color)]">₹{(summary.price || 0).toFixed(2)}</span>
+                <span className="text-[var(--dark-color)]">
+                  ₹{(summary.price || 0).toFixed(2)}
+                </span>
               </div>
 
               <div className="flex justify-between">
@@ -389,7 +377,9 @@ export default function OrderTrackingPage({ params }) {
 
               <div className="flex justify-between">
                 <span className="text-[var(--dark-color)]">Total fees</span>
-                <span className="text-[var(--dark-color)]">₹{(summary.fees || 0).toFixed(2)}</span>
+                <span className="text-[var(--dark-color)]">
+                  ₹{(summary.fees || 0).toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -397,7 +387,9 @@ export default function OrderTrackingPage({ params }) {
 
             <div className="flex justify-between items-center text-lg font-bold">
               <span className="text-[var(--dark-color)]">Total amount</span>
-              <span className="text-[var(--dark-color)]">₹{(summary.total || 0).toFixed(2)}</span>
+              <span className="text-[var(--dark-color)]">
+                ₹{(summary.total || 0).toFixed(2)}
+              </span>
             </div>
 
             <div className="mt-5 border rounded-xl p-3 flex items-center justify-between text-sm border-[var(--bg-muted)]">
@@ -409,9 +401,11 @@ export default function OrderTrackingPage({ params }) {
               </span>
             </div>
 
-            <button className="w-full mt-5 bg-[var(--light-color)] border font-semibold 
-                               text-[var(--dark-color)] border-[var(--bg-muted)] py-3 rounded-xl 
-                               flex items-center justify-center gap-2 hover:bg-[var(--bg-muted)]/30 transition">
+            <button
+              className="w-full mt-5 bg-[var(--light-color)] border font-semibold 
+                         text-[var(--dark-color)] border-[var(--bg-muted)] py-3 rounded-xl 
+                         flex items-center justify-center gap-2 hover:bg-[var(--bg-muted)]/30 transition"
+            >
               <BiSolidDownload className="text-xl" />
               Download Invoice
             </button>
@@ -427,6 +421,76 @@ export default function OrderTrackingPage({ params }) {
           </div>
         </aside>
       </div>
+
+      {/* ✅ POPUP UI */}
+      {showCancelPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999] px-4">
+          <div className="bg-white w-full max-w-md rounded-xl p-6">
+
+            <h2 className="text-xl font-bold text-[var(--dark-color)]">
+              Cancel Order
+            </h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              Please tell us why you're cancelling this order
+            </p>
+
+            <div className="mt-4 space-y-3 text-sm">
+              {[
+                "Ordered by mistake",
+                "Found cheaper somewhere else",
+                "Delivery taking too long",
+                "Need to change address/phone",
+                "Other"
+              ].map((reason) => (
+                <label key={reason} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="cancelReason"
+                    value={reason}
+                    onChange={() => {
+                      setCancelReason(reason);
+                      if (reason !== "Other") setOtherReason("");
+                    }}
+                    className="accent-[var(--primary-color)]"
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+
+            {cancelReason === "Other" && (
+              <input
+                type="text"
+                value={otherReason}
+                onChange={(e) => setOtherReason(e.target.value)}
+                placeholder="Please specify"
+                className="w-full mt-3 border rounded-lg px-3 py-2 text-sm border-[var(--bg-muted)]"
+              />
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowCancelPopup(false)}
+                className="px-5 py-2 rounded-lg border border-[var(--bg-muted)] text-sm"
+              >
+                Close
+              </button>
+
+              <button
+                onClick={handleCancelSubmit}
+                disabled={!cancelReason || (cancelReason === "Other" && !otherReason)}
+                className={`px-6 py-2 rounded-lg text-white text-sm font-semibold
+                  ${!cancelReason || (cancelReason === "Other" && !otherReason)
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-[var(--primary-color)] hover:opacity-90"
+                  }`}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

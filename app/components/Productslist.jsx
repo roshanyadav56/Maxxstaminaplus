@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { FaRegHeart, FaHeart, FaCartArrowDown } from "react-icons/fa";
+import { FaRegHeart, FaHeart } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -99,25 +99,15 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
   ];
 
   // ================================
-  // CART + WISHLIST LOCAL STORAGE
+  // WISHLIST LOCAL STORAGE
   // ================================
-  const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
-    const c = localStorage.getItem("cart");
     const w = localStorage.getItem("wishlist");
-    if (c) setCart(JSON.parse(c));
     if (w) setWishlist(JSON.parse(w));
   }, []);
-
-  const addToCart = (product) => {
-    if (cart.some((p) => p.id === product.id)) return;
-    const updated = [...cart, product];
-    setCart(updated);
-    localStorage.setItem("cart", JSON.stringify(updated));
-  };
 
   const toggleWishlist = (product) => {
     let updated;
@@ -136,11 +126,9 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
   const sortedProducts = useMemo(() => {
     let sorted = [...products];
 
-    // Filters
     if (showBestsellerOnly) sorted = sorted.filter((p) => p.isBestseller);
     if (NewArrivalOnly) sorted = sorted.filter((p) => p.isNewArrival);
 
-    // Sorting
     switch (sortBy) {
       case "priceLowToHigh":
         sorted.sort((a, b) => a.currentPrice - b.currentPrice);
@@ -174,11 +162,6 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
         break;
     }
 
-    // Show Only Top 4
-    if (showBestsellerOnly || NewArrivalOnly || sortBy === "bestseller" || sortBy === "newarrival") {
-      return sorted.slice(0, 4);
-    }
-
     return sorted;
   }, [sortBy, showBestsellerOnly, NewArrivalOnly]);
 
@@ -189,122 +172,120 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
     const isWishlisted = wishlist.some((p) => p.id === product.id);
 
     return (
-      <div
-        onClick={() => setSelectedProduct(product)}
-        className="relative group cursor-pointer"
-      >
-        <div className="block bg-[var(--light-color)] rounded-xl shadow-sm p-4 hover:shadow-lg transition-all duration-300 border border-[var(--bg-muted)] relative">
+      <div className="relative group bg-[var(--light-color)] rounded-xl shadow-sm p-2 sm:p-4 hover:shadow-lg transition-all duration-300 border border-[var(--bg-muted)]">
 
-          {/* ❤️ Wishlist */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleWishlist(product);
-            }}
-            className="absolute top-5 left-5 z-30 p-2 rounded-full bg-[var(--light-color)]"
-          >
-            {isWishlisted ? (
-              <FaHeart size={18} className="text-[var(--primary-color)]" />
-            ) : (
-              <FaRegHeart size={20} className="text-[var(--primary-color)]" />
-            )}
-          </button>
-
-          {/* Discount Badge */}
-          {!product.isNewArrival && (
-            <div className="absolute top-4 right-4 z-30 bg-[var(--primary-color)] text-white px-2 py-1 rounded-bl-lg rounded-tr-lg text-[10px] sm:text-sm shadow-md">
-              <span className="font-semibold">{product.discountPercent}%</span><br />
-              <span className="text-[8px] sm:text-[11px]">OFF</span>
-            </div>
+        {/* ❤️ Wishlist */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleWishlist(product);
+          }}
+          className="absolute top-3 sm:top-5 left-3 sm:left-5 z-30 p-1.5 sm:p-2 rounded-full bg-[var(--light-color)]"
+        >
+          {isWishlisted ? (
+            <FaHeart className="text-xs sm:text-base text-[var(--primary-color)]" />
+          ) : (
+            <FaRegHeart className="text-xs sm:text-base text-[var(--primary-color)]" />
           )}
+        </button>
 
-          {/* NEW Badge */}
-          {product.isNewArrival && (
-            <div className="absolute top-4 right-4 bg-[var(--accent-color)] text-white px-3 py-1 rounded-bl-xl rounded-tr-lg text-xs font-semibold">
-              NEW
-            </div>
-          )}
-
-          {/* Product Image */}
-          <div className="relative w-full aspect-[4/3] mb-4 overflow-hidden rounded-md bg-[var(--bg-muted)]">
-            <Image src={product.image} alt={product.name} fill className="object-contain p-6" />
+        {/* NEW BADGE */}
+        {product.isNewArrival && (
+          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-[var(--accent-color)] text-white px-2 py-[2px] text-[10px] sm:text-xs rounded-tr-md rounded-bl-md font-semibold z-30">
+            NEW
           </div>
+        )}
 
-          {/* Name */}
-          <h3 className="font-semibold text-[var(--dark-color)] text-sm mb-1 px-3 truncate">
-            {product.name}
-          </h3>
+        {/* IMAGE */}
+        <div
+          className="relative w-full aspect-square mb-3 overflow-hidden rounded-md bg-[var(--bg-muted)] cursor-pointer"
+          onClick={() => setSelectedProduct(product)}
+        >
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-contain p-3 sm:p-5"
+          />
+        </div>
 
-          {/* Prices */}
-          <div className="flex items-center gap-3 mb-3 px-3">
-            <span className="text-lg font-bold text-[var(--dark-color)]">
-              ₹{product.currentPrice}
-            </span>
+        {/* DETAILS */}
+        <Link href={`/products/${product.id}`}>
+          <div className="px-1 cursor-pointer">
 
-            {!product.isNewArrival && (
-              <span className="text-sm line-through text-[var(--text-muted)]">
+            {/* NAME */}
+            <h3 className="font-semibold text-[var(--dark-color)] text-xs sm:text-sm mb-1 truncate">
+              {product.name}
+            </h3>
+
+            {/* PRICE ROW */}
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+
+              {/* CURRENT PRICE */}
+              <span className="text-base sm:text-lg font-bold text-[var(--dark-color)]">
+                ₹{product.currentPrice}
+              </span>
+
+              {/* OLD PRICE */}
+              <span className="text-xs sm:text-sm line-through text-[var(--text-muted)]">
                 ₹{product.oldPrice}
               </span>
-            )}
-          </div>
 
-          {/* Save */}
-          {!product.isNewArrival && (
-            <div className="text-[var(--primary-color)] font-semibold text-sm px-4 mb-3">
+              {/* DISCOUNT PILL */}
+              <span className="text-[10px] sm:text-xs font-bold text-[var(--primary-color)] bg-[var(--primary-color)]/10 px-1.5 py-[1px] rounded">
+                {product.discountPercent}% OFF
+              </span>
+            </div>
+
+            {/* SAVE AMOUNT */}
+            <div className="text-[var(--primary-color)] font-semibold text-xs sm:text-sm mb-1">
               Save ₹{product.saveAmount}
             </div>
-          )}
-        </div>
+
+          </div>
+        </Link>
       </div>
+
     );
   };
 
+
   return (
-    <section className="max-w-7xl mx-auto px-4 py-2 sm:py-8">
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <section className="max-w-7xl mx-auto py-2 sm:py-8">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 sm:px-4">
         {sortedProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
 
-      {/* ================================
-          POPUP / MODAL
-      ================================= */}
-    {selectedProduct && (
-  <div
-    className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-    onClick={() => setSelectedProduct(null)}   // background click closes popup
-  >
-    <div
-      className="relative w-[90%] max-w-sm bg-white rounded-xl overflow-hidden"
-      onClick={(e) => e.stopPropagation()}  // prevent closing when clicking image container
-    >
+      {/* ✅ POPUP */}
+      {selectedProduct && (
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div
+            className="relative w-[90%] max-w-sm bg-white rounded-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-2 right-2 text-white bg-black/60 rounded-full px-2 py-1 z-50"
+              onClick={() => setSelectedProduct(null)}
+            >
+              ✕
+            </button>
 
-      {/* CLOSE BUTTON */}
-      <button
-        className="absolute top-2 right-2 text-white bg-black/60 rounded-full px-2 py-1 z-50"
-        onClick={() => setSelectedProduct(null)}
-      >
-        ✕
-      </button>
-
-      {/* CLICKABLE IMAGE */}
-      <div
-        className="relative w-full h-72 sm:h-96 cursor-pointer"
-        onClick={() => window.location.href = `/products/${selectedProduct.id}`}  
-      >
-        <Image
-          src={selectedProduct.image}
-          alt="product"
-          fill
-          className="object-contain bg-white p-4"
-        />
-      </div>
-
-    </div>
-  </div>
-)}
-
+            <div className="relative w-full h-72 sm:h-96">
+              <Image
+                src={selectedProduct.image}
+                alt="product"
+                fill
+                className="object-contain bg-white p-4"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

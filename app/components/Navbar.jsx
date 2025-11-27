@@ -57,9 +57,9 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="w-full border-b border-[var(--bg-muted)] bg-[var(--light-color)] sticky top-0 z-50 text-[var(--dark-color)]">
+      <header className="w-full border-b border-[var(--bg-muted)] bg-[var(--light-color)] py-2 sticky top-0 z-50 text-[var(--dark-color)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-20 flex items-center justify-between gap-4">
+          <div className="sm:h-20 h-12 flex items-center justify-between gap-4">
 
             {/* LEFT: Logo */}
             <Link href="/" className="flex items-center">
@@ -68,7 +68,7 @@ export default function Navbar() {
                 alt="MaxxStaminaPlus"
                 width={90}
                 height={45}
-                className="object-contain"
+                className="object-contain w-15 sm:w-22"
                 priority
               />
             </Link>
@@ -86,7 +86,7 @@ export default function Navbar() {
                   type="text"
                   placeholder="Search Products..."
                   className="
-    w-full bg-[var(--bg-muted)]/20 border border-transparent 
+    w-full bg-[var(--bg-muted)]/20 border border-[var(--primary-color)]/20 
     text-sm rounded-full py-2 pl-10 pr-4 outline-none
   "
                 />
@@ -254,29 +254,29 @@ export default function Navbar() {
           </div>
         )}
       </header>
-      <div className="marquee-wrapper bg-[#00008b] text-[var(--light-color)] py-2">
-  <div className="marquee-track">
+      <div className="marquee-wrapper mt-1 sm:mt-3 text-[var(--dark-color)] py-1 sm:py-2 overflow-hidden">
+        <div className="marquee-track">
 
-    {/* Track 1 */}
-    <div className="flex gap-10 pr-10">
-      <span>🔥 Boost Stamina Naturally With MaxxShilajit</span>
-      <span>💥 Buy 1 Get 1 Free – Limited Offer!</span>
-      <span>🚚 Free Shipping On Orders Over ₹999</span>
-      <span>⭐ 100% Pure Himalayan Shilajit – Lab Tested</span>
-      <span>⚡ Fast Delivery Across India</span>
-    </div>
+          {/* Track 1 */}
+          <div className="flex gap-10 pr-10 text-xs sm:text-sm">
+            <span>Boost Stamina Naturally With MaxxShilajit</span>
+            <span>Buy 1 Get 1 Free – Limited Offer!</span>
+            <span>Free Shipping On Orders Over ₹999</span>
+            <span>100% Pure Himalayan Shilajit – Lab Tested</span>
+            <span>Fast Delivery Across India</span>
+          </div>
 
-    {/* Track 2 - Duplicate */}
-    <div className="flex gap-10 pr-10">
-      <span>🔥 Boost Stamina Naturally With MaxxShilajit</span>
-      <span>💥 Buy 1 Get 1 Free – Limited Offer!</span>
-      <span>🚚 Free Shipping On Orders Over ₹999</span>
-      <span>⭐ 100% Pure Himalayan Shilajit – Lab Tested</span>
-      <span>⚡ Fast Delivery Across India</span>
-    </div>
+          {/* Track 2 - Duplicate */}
+          <div className="flex gap-10 text-xs sm:text-sm pr-10">
+            <span>Boost Stamina Naturally With MaxxShilajit</span>
+            <span>Buy 1 Get 1 Free – Limited Offer!</span>
+            <span>Free Shipping On Orders Over ₹999</span>
+            <span>100% Pure Himalayan Shilajit – Lab Tested</span>
+            <span>Fast Delivery Across India</span>
+          </div>
 
-  </div>
-</div>
+        </div>
+      </div>
 
 
     </>
