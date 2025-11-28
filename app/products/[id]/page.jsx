@@ -43,6 +43,7 @@ export default function ProductDetails({ params }) {
       oldPrice: 699,
       discountPercent: 34,
       saveAmount: 240,
+      enable360: true,
       description:
         "Premium Shilajit Gold Resin for enhanced stamina, strength and energy. 100% pure Himalayan extract.",
     },
@@ -59,6 +60,7 @@ export default function ProductDetails({ params }) {
       oldPrice: 699,
       discountPercent: 34,
       saveAmount: 240,
+      enable360: false, // ✔ FIXED HERE
       description:
         "Authentic Shilajit Gold Resin with rich minerals to boost performance and reduce fatigue.",
     },
@@ -75,6 +77,7 @@ export default function ProductDetails({ params }) {
       oldPrice: 699,
       discountPercent: 28,
       saveAmount: 200,
+      enable360: true,
       description:
         "Extra Shot+ capsules designed to boost energy levels, immunity, and overall vitality.",
     },
@@ -92,28 +95,33 @@ export default function ProductDetails({ params }) {
       oldPrice: 699,
       discountPercent: 28,
       saveAmount: 200,
+      enable360: false,
       description:
         "Daily wellness supplement focusing on performance, stamina, and hormonal balance.",
     },
   ];
 
-  // 360 drag handlers
+
+  // TOUCH + MOUSE DRAG (FINAL)
   const startDrag = (e) => {
-    // ensure only left button
-    if (e.button !== undefined && e.button !== 0) return;
-    setDragStartX(e.clientX);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    setDragStartX(clientX);
   };
 
   const duringDrag = (e) => {
     if (dragStartX === null) return;
-    const diff = e.clientX - dragStartX;
-    setRotation((prev) => prev + diff * 0.4); // control sensitivity
-    setDragStartX(e.clientX);
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const diff = clientX - dragStartX;
+
+    setRotation((prev) => prev + diff * 0.4);
+    setDragStartX(clientX);
   };
 
   const stopDrag = () => {
     setDragStartX(null);
   };
+
 
   const product = allProducts.find((p) => p.id === Number(id));
 
@@ -255,10 +263,17 @@ export default function ProductDetails({ params }) {
   // ZOOM HANDLER (throttled via requestAnimationFrame)
   // ------------------------------
   const handleZoomMove = (e) => {
-    if (is360) return; // do not update zoom while 360 mode is active
+    // 🔥 TOUCH DEVICES par zoom OFF
+    if (e.type === "touchmove") return;
+
+    // 🔥 360 mode ON → Zoom disabled
+    if (is360) return;
+
+    // Zoom not active
     if (!isZooming) return;
 
-    if (zoomRef.current) return; // already scheduled
+    // Throttle
+    if (zoomRef.current) return;
     zoomRef.current = true;
 
     requestAnimationFrame(() => {
@@ -268,18 +283,26 @@ export default function ProductDetails({ params }) {
       }
 
       const rect = zoomContainerRef.current.getBoundingClientRect();
-      // use clientX/clientY for consistent behavior
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-      // clamp values between 0 and 100 to avoid weird transforms
       const cx = Math.min(100, Math.max(0, x));
       const cy = Math.min(100, Math.max(0, y));
 
-      setZoomPosition({ x: cx, y: cy });
+      // ⚡ Prevent unnecessary state updates
+      setZoomPosition((prev) => {
+        if (prev.x === cx && prev.y === cy) {
+          zoomRef.current = false;
+          return prev;
+        }
+        return { x: cx, y: cy };
+      });
+
       zoomRef.current = false;
     });
   };
+
+
 
   return (
     <>
@@ -293,38 +316,48 @@ export default function ProductDetails({ params }) {
             <div
               ref={zoomContainerRef}
               className="relative w-full aspect-square bg-[var(--bg-muted)] rounded-lg shadow-sm overflow-visible"
+
+              /* DESKTOP MOUSE EVENTS */
+              onMouseEnter={() => {
+                if (!product.enable360) setIsZooming(true);
+                if (product.enable360 && !is360) setIsZooming(true);
+              }}
+
               onMouseMove={(e) => {
-                // If 360 active, we'll handle rotation in mouse move only when dragging (see onMouseDown)
-                if (is360) {
-                  // if dragging, duringDrag will handle rotation (duringDrag is attached below via onMouseMove when is360)
+                // CASE 1: 360 active → drag rotation
+                if (product.enable360 && is360) {
+                  duringDrag(e);
                   return;
                 }
-                handleZoomMove(e);
-              }}
-              onMouseEnter={() => { if (!is360) setIsZooming(true); }}
-              onMouseLeave={() => {
-                setIsZooming(false);
-                zoomRef.current = false;
-                stopDrag();
-              }}
-              onMouseDown={(e) => {
-                // Start drag only for 360 mode
-                if (is360) startDrag(e);
-              }}
-              onMouseUp={(e) => {
-                if (is360) stopDrag(e);
-              }}
-              onMouseMoveCapture={(e) => {
-                // If is360 and dragging, call duringDrag from the capture phase to ensure it runs.
-                if (is360 && dragStartX !== null) {
-                  duringDrag(e);
+
+                // CASE 2: 360 allowed but OFF → Zoom
+                if (product.enable360 && !is360) {
+                  handleZoomMove(e);
+                  return;
+                }
+
+                // CASE 3: normal product → Zoom
+                if (!product.enable360) {
+                  handleZoomMove(e);
+                  return;
                 }
               }}
+
+              onMouseDown={(e) => product.enable360 && is360 && startDrag(e)}
+              onMouseUp={stopDrag}
+              onMouseLeave={() => {
+                stopDrag();
+                setIsZooming(false);
+              }}
+
+              /* MOBILE TOUCH EVENTS */
+              onTouchStart={(e) => product.enable360 && is360 && startDrag(e)}
+              onTouchMove={(e) => product.enable360 && is360 && duringDrag(e)}
+              onTouchEnd={stopDrag}
             >
-              {is360 ? (
-                <div
-                  className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
-                >
+              {/* 360 MODE */}
+              {product.enable360 && is360 ? (
+                <div className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing">
                   <Image
                     src={productImages[currentImageIndex]}
                     alt="360-view"
@@ -333,11 +366,12 @@ export default function ProductDetails({ params }) {
                     className="object-contain p-6 select-none"
                     style={{
                       transform: `rotateY(${rotation}deg)`,
-                      transition: dragStartX ? "none" : "transform 0.15s ease-out"
+                      transition: dragStartX ? "none" : "transform 0.12s ease-out",
                     }}
                   />
                 </div>
               ) : (
+                /* Normal / Zoom Image */
                 <Image
                   src={productImages[currentImageIndex]}
                   alt={`${product.name} - Image ${currentImageIndex + 1}`}
@@ -346,66 +380,26 @@ export default function ProductDetails({ params }) {
                 />
               )}
 
-
-              {/* LEFT Arrow */}
-              <button
-                onClick={() =>
-                  setCurrentImageIndex(
-                    (currentImageIndex - 1 + productImages.length) % productImages.length
-                  )
-                }
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-[var(--light-color)] rounded-full p-2 shadow hover:bg-[var(--bg-muted)] transition invisible"
-              >
-                <span className="text-[var(--primary-color)] text-lg">‹</span>
-              </button>
-
-              {/* RIGHT Arrow */}
-              <button
-                onClick={() =>
-                  setCurrentImageIndex((currentImageIndex + 1) % productImages.length)
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-[var(--light-color)] rounded-full p-2 shadow hover:bg-[var(--bg-muted)] transition invisible"
-              >
-                <span className="text-[var(--primary-color)] text-lg">›</span>
-              </button>
-
-              {/* Sold & Rating Badge */}
-              <div className="absolute top-4 left-4 flex flex-col gap-1">
-                <div className="text-xs font-bold bg-[var(--light-color)] rounded-lg px-3 py-2 shadow text-[var(--primary-color)]">
-                  1,238 <span className="text-[var(--dark-color)]">Sold</span>
-                </div>
-                <div className="text-sm font-semibold bg-[var(--light-color)] rounded-lg px-3 py-2 shadow text-[var(--dark-color)]">
-                  <span className="text-yellow-400">★</span> 4.5
-                </div>
-              </div>
-
-              {/* Wishlist + Share */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2">
+              {/* 360 BUTTON */}
+              {product.enable360 && (
                 <button
-                  onClick={toggleWishlist}
-                  className={`p-3 rounded-full shadow transition ${isWishlisted ? "bg-[var(--primary-color)]" : "bg-[var(--light-color)]"
-                    }`}
+                  onClick={() => {
+                    setIs360(!is360);
+                    setIsZooming(false);
+                    zoomRef.current = false;
+                    stopDrag();
+                    setRotation(0);
+                  }}
+                  className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-1 rounded-lg z-[10]"
                 >
-                  {isWishlisted ? (
-                    <AiFillHeart size={20} className="text-[var(--light-color)]" />
-                  ) : (
-                    <FiHeart size={20} className="text-[var(--primary-color)]" />
-                  )}
+                  {is360 ? "Stop 360°" : "View 360°"}
                 </button>
-                <button
-                  onClick={shareOnWhatsApp}
-                  className="p-3 rounded-full shadow bg-[var(--light-color)] hover:bg-[var(--bg-muted)] transition"
-                >
-                  <FiShare2 size={20} className="text-[var(--primary-color)]" />
-                </button>
-              </div>
+              )}
 
-
-              {/* 🔥 RIGHT SIDE ZOOM BOX — Flipkart Style */}
+              {/* ZOOM BOX */}
               {!is360 && isZooming && (
                 <div
                   className="hidden md:block absolute top-0 left-full ml-10 w-full aspect-square border rounded-lg overflow-hidden shadow-xl bg-white z-[999]"
-                  style={{ width: "100%", height: "100%" }}
                 >
                   <Image
                     src={productImages[currentImageIndex]}
@@ -420,21 +414,9 @@ export default function ProductDetails({ params }) {
                 </div>
               )}
 
-
-              <button
-                onClick={() => {
-                  setIs360(!is360);
-                  // ensure zoom off when entering 360
-                  setIsZooming(false);
-                  zoomRef.current = false;
-                  stopDrag();
-                  setRotation(0); // reset rotation if you want; remove if you want persistent
-                }}
-                className="absolute bottom-4 left-4 bg-black/60 text-white text-xs px-3 py-1 rounded-lg z-[50]"
-              >
-                {is360 ? "Stop 360°" : "View 360°"}
-              </button>
             </div>
+
+
 
             {/* Thumbnail Carousel */}
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -468,7 +450,7 @@ export default function ProductDetails({ params }) {
             </h1>
 
             {/* Price Section */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-0">
               <span className="text-sm md:text-2xl line-through text-[var(--dark-color)]">
                 ₹{totalOldPrice}.00
               </span>
@@ -484,14 +466,35 @@ export default function ProductDetails({ params }) {
 
 
             <p className="text-xs text-[var(--dark-color)] mb-6">MRP (incl. all taxes)</p>
+            <div>
+              <label className="text-sm font-semibold text-gray-800 mb-2 block">Select Quantity</label>
 
-            <hr className="my-4" />
+              <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden w-[120px]">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-10 h-10 bg-[var(--bg-muted)] text-[var(--dark-color)] hover:bg-gray-200 transition font-bold text-lg"
+                >
+                  −
+                </button>
 
-            {/* Description */}
-            <p className="text-sm text-[var(--dark-color)] leading-relaxed mb-6">
-              {product.description}
-            </p>
+                <div className="w-14 h-10 flex items-center justify-center text-gray-800 font-semibold">
+                  {String(quantity).padStart(1, "0")}
+                </div>
 
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-10 h-10 bg-[var(--bg-muted)] text-[var(--dark-color)] hover:bg-gray-200 transition font-bold text-lg"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* DESCRIPTION */}
+            <div className="mt-6 mb-6">
+              <h3 className="text-sm font-semibold text-gray-900 ">Product Description</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">{product.description}</p>
+            </div>
 
 
 
@@ -518,30 +521,7 @@ export default function ProductDetails({ params }) {
               </button>
             </div>
 
-            {/* Quantity Selector */}
-            <div className="mb-6">
-              <label className="text-sm font-bold text-[var(--dark-color)] block mb-3">Quantity</label>
-              <div className="flex items-center w-fit">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-10 h-10 bg-[var(--primary-color)] text-[var(--light-color)] rounded-l flex items-center justify-center font-bold text-lg"
-                >
-                  −
-                </button>
-                <input
-                  type="text"
-                  value={String(quantity).padStart(2, "0")}
-                  readOnly
-                  className="w-14 h-10 text-center border border-[var(--bg-muted)] py-1 text-[var(--dark-color)] font-bold text-lg"
-                />
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-10 h-10 bg-[var(--primary-color)] text-[var(--light-color)] rounded-r flex items-center justify-center font-bold text-lg"
-                >
-                  +
-                </button>
-              </div>
-            </div>
+
 
             {/* Offers Section */}
             <div className="mb-6">
@@ -565,21 +545,21 @@ export default function ProductDetails({ params }) {
           </div>
         </div>
 
-        <div className=" max-w-7xl mx-auto px-8 py-10 bg-[var(--light-color)] rounded-2xl">
+        <div className=" max-w-7xl mx-auto px-0 sm:px-8 py-0 sm:py-5 bg-[var(--light-color)] rounded-2xl">
           <ProductBenefits />
         </div>
 
-        <div className=" max-w-7xl mx-auto px-8 py-10 bg-[var(--light-color)] rounded-2xl">
+        <div className=" max-w-7xl mx-auto px-0 sm:px-8 py-0 sm:py-5 bg-[var(--light-color)] rounded-2xl">
           <BenefitsSlider />
         </div>
 
-        <div className=" max-w-7xl mx-auto px-8 py-10 bg-[var(--light-color)] rounded-2xl">
+        <div className=" max-w-7xl mx-auto px-0 sm:px-8 py-0 sm:py-5 bg-[var(--light-color)] rounded-2xl">
           <StepbyStep />
         </div>
 
 
       </div>
-      <div className=" max-w-7xl mx-auto px-8 py-10 rounded-2xl">
+      <div className=" max-w-7xl mx-auto px-0 sm:px-8 py-0 sm:py-5 rounded-2xl">
         <ReviewList />
       </div>
     </>

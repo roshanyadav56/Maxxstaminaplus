@@ -122,7 +122,7 @@ export default function AccountPage() {
             </li>
 
             <li onClick={() => router.push("/wishlist")} className="cursor-pointer">
-              My Favourite
+              Wishlist 
             </li>
 
             <li

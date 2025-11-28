@@ -58,7 +58,7 @@ export default function CouponAndDeliveryBox() {
           no-scrollbar       /* Hides scroll bar */
           w-full
         "
-        style={{ maxWidth: "480px" }}   // ⬅️ Only fits 2 cards
+        style={{ maxWidth: "580px" }}   // ⬅️ Only fits 2 cards
       >
         {coupons.map((c, i) => (
           <div
@@ -116,7 +116,7 @@ export default function CouponAndDeliveryBox() {
           Check Delivery Date
         </h2>
 
-        <div className="flex border rounded-xl overflow-hidden w-full max-w-md border-[var(--primary-color)] bg-[var(--light-color)]">
+        <div className="flex border rounded-xl overflow-hidden w-full border-[var(--primary-color)] bg-[var(--light-color)]">
           <span className="flex items-center px-3 text-[var(--primary-color)]">
             <FaMapMarkerAlt />
           </span>

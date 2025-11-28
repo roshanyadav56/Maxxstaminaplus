@@ -7,7 +7,7 @@ import { FaInstagram, FaTwitter, FaDiscord } from "react-icons/fa";
 export default function Contact() {
   return (
     <>
-      <section
+      {/* <section
         className="
               relative
               min-h-[60vh] md:min-h-[70vh] w-full flex items-center
@@ -16,11 +16,11 @@ export default function Contact() {
               before:z-0
             bg-[var(--primary-color)] text-[var(--light-color)]"
       >
-        {/* CONTENT */}
+        
         <div className="relative z-10 max-w-7xl mx-auto w-full px-6 lg:px-12">
           <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-8">
 
-            {/* LEFT TEXT */}
+            
             <div className="md:col-span-6 lg:col-span-5">
               <div className="max-w-xl">
                 <p className="text-base mb-4 text-[var(--light-color)]">
@@ -41,7 +41,7 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* RIGHT IMAGE */}
+           
             <div className="md:col-span-6 lg:col-span-7 flex justify-center md:justify-end">
               <div className="
                       relative
@@ -65,7 +65,7 @@ export default function Contact() {
 
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CONTACT FORM SECTION */}
       <section className="w-full flex justify-center py-10 px-4">

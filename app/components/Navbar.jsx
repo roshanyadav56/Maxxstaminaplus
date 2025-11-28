@@ -55,6 +55,19 @@ export default function Navbar() {
     return pathname.startsWith(href);
   };
 
+  // User Greeting (optional)
+  const [userName, setUserName] = useState(null);
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("loggedInUser"));
+      if (user?.name) {
+        setUserName(user.name);
+      }
+    } catch (e) { }
+  }, []);
+
+
   return (
     <>
       <header className="w-full border-b border-[var(--bg-muted)] bg-[var(--light-color)] py-2 sticky top-0 z-50 text-[var(--dark-color)]">
@@ -136,36 +149,45 @@ export default function Navbar() {
               {/* Wishlist (desktop) */}
               <Link
                 href="/wishlist"
-                className={`hidden md:block relative ${isActive("/wishlist") ? "text-[var(--primary-color)]" : ""}`}
+                className={`hidden md:flex flex-col items-center relative ${isActive("/wishlist") ? "text-[var(--primary-color)]" : ""}`}
               >
                 <FiHeart size={20} />
                 {favCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-[var(--primary-color)] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-0 bg-[var(--primary-color)] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                     {favCount}
                   </span>
                 )}
+                <span className="text-[10px] mt-1">Wishlist</span>
               </Link>
+
 
               {/* Cart (always visible) */}
               <Link
                 href="/cart"
-                className={`relative p-2 rounded-md hover:bg-[var(--bg-muted)] ${isActive("/cart") ? "text-[var(--primary-color)]" : ""}`}
+                className={`relative md:flex md:flex-col md:items-center p-2 rounded-md hover:bg-[var(--bg-muted)] ${isActive("/cart") ? "text-[var(--primary-color)]" : ""}`}
               >
                 <FiShoppingCart size={22} />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[var(--primary-color)] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-0 -right-0 bg-[var(--primary-color)] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
+                <span className="hidden md:block text-[10px] mt-1">Cart</span>
               </Link>
+
 
               {/* Account (desktop) */}
               <Link
                 href="/account"
-                className={`hidden md:block ${isActive("/account") ? "text-[var(--primary-color)]" : ""}`}
+                className={`hidden md:flex md:flex-col md:items-center ${isActive("/account") ? "text-[var(--primary-color)]" : ""}`}
               >
                 <FiUser size={20} />
+                <span className="text-[10px] mt-1">
+                  {userName ? userName : "Account"}
+                </span>
+
               </Link>
+
 
               {/* MOBILE SEARCH */}
               <button
@@ -207,9 +229,15 @@ export default function Navbar() {
                 <Link href="/wishlist" onClick={() => setOpen(false)} className="text-white flex gap-2">
                   <FiHeart /> Wishlist
                 </Link>
-                <Link href="/account" onClick={() => setOpen(false)} className="text-white flex gap-2">
-                  <FiUser /> Account
+                <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="text-white flex gap-2"
+                >
+                  <FiUser />
+                  {userName ? userName : "Account"}
                 </Link>
+
               </div>
             </div>
           </div>

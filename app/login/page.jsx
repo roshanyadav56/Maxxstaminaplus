@@ -28,10 +28,22 @@ export default function LoginPage() {
     localStorage.removeItem("appliedCoupon");
     localStorage.removeItem("checkoutProduct");
 
-    // ✅ SAVE LOGGED-IN USER
-    localStorage.setItem("loggedInUser", found.id);
+    // ⭐ SAVE FULL LOGGED-IN USER (IMPORTANT)
+    localStorage.setItem(
+      "loggedInUser",
+      JSON.stringify({
+        id: found.id,
+        name: found.name,
+        email: found.email,
+      })
+    );
 
-    // ✅ REDIRECT
+    // NOTIFY NAVBAR TO UPDATE COUNTS + NAME
+    try {
+      window.dispatchEvent(new Event("localStorageUpdated"));
+    } catch (e) {}
+
+    // REDIRECT TO ACCOUNT
     router.push("/account");
   }
 

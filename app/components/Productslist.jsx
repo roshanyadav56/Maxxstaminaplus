@@ -251,8 +251,8 @@ export default function Productss({ showBestsellerOnly = false, NewArrivalOnly =
 
 
   return (
-    <section className="max-w-7xl mx-auto py-2 sm:py-8">
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 sm:px-4">
+    <section className="max-w-7xl mx-auto py-2 sm:py-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6  sm:px-4">
         {sortedProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
